@@ -55,8 +55,6 @@ A submission runs on its second attempt, fails one task, partially passes two, a
 | Task 4: pass | No deduction | 48.6 |
 | Task 5: pass | No deduction | **48.6** |
 
-> Under this scoring system, software that runs but fails all five tasks still receives a nonzero score. The objective score rewards both successful execution and functionality.
-
 ## Evaluation consistency
 
 - Each model receives the same task specification and test requirements.
