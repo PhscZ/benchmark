@@ -342,3 +342,104 @@ serve the WebAssembly build.
 | Desktop browser | Build and serve the WebAssembly version; complete a run with working graphics, audio after interaction, and controls. Firefox. |
 | Mobile browser | Play using touch on Android and iOS; resizing and orientation changes preserve usability without page scrolling or duplicate flaps. |
 | Gameplay and lifecycle | Verify scoring, collisions, pause/resume, focus handling, and repeated restarts without stale state or accumulating off-screen objects. |
+
+### 4. Desktop Text Editor in Rust
+
+```text
+write a desktop text editor in Rust for Windows with a custom text buffer
+and custom editing behavior. a GUI framework may be used for windowing,
+drawing, layout, font rendering, and input, but do not use an existing
+text-editing widget or editor engine for the document area.
+
+implement the document buffer yourself, such as a piece table, gap buffer,
+or rope. do not wrap a ready-made editor buffer library. avoid copying
+the entire document on every edit.
+
+provide complete source, pinned dependencies, and build/run instructions.
+
+file operations:
+- create new documents and open existing files through a file dialog
+- support save and save as
+- support UTF-8 text
+- clearly reject invalid UTF-8 rather than silently corrupting it
+- show the filename and unsaved-change indicator in each tab
+- prompt to save, discard, or cancel when closing an unsaved document
+  or exiting with unsaved documents
+- report file errors without crashing or losing the open document
+- save safely through a temporary file and replacement so a failed write
+  does not truncate the original file
+
+editing and navigation:
+- insert text, newlines, and tabs
+- support Backspace, Delete, and clipboard copy/cut/paste
+- support arrow keys, Home/End, Ctrl+Home/End, Page Up/Page Down,
+  and Ctrl+Left/Right for word navigation
+- clicking places the cursor at the corresponding text position
+- support selection with mouse dragging, Shift+click, Shift+navigation,
+  Ctrl+Shift+Left/Right, and Ctrl+A
+- double-click selects a word
+- typing or pasting replaces the current selection
+- dragging beyond the viewport scrolls while extending selection
+- keep the cursor visible while navigating and editing
+- full bidirectional text layout is not required
+
+undo and redo:
+- support Ctrl+Z and Ctrl+Y, with separate history for each document
+- restore text, cursor, and selection appropriately
+- group consecutive typing into sensible undo steps
+- treat paste and replace-all as single undoable actions
+- editing after undo must discard the redo branch
+- saving must not clear undo history
+- undoing back to the saved state must clear the unsaved-change indicator
+
+find and replace:
+- provide a search bar with literal text search and a case-sensitive toggle
+- support next/previous match, wraparound, and a match count
+- highlight visible matches and distinguish the current match
+- support replacing the current match and replacing all matches
+- define safe behavior for an empty search query
+- regex search is not required
+
+interface:
+- show line numbers in a gutter aligned with the text
+- show cursor line/column, encoding, and line-ending style in a status bar
+- support vertical and horizontal scrolling
+- use a monospace font with consistent cursor and selection positioning
+- soft wrapping is not required; long lines must scroll horizontally
+- support multiple tabs, each retaining its own cursor, selection,
+  scroll position, undo/redo history, and unsaved state
+- provide visible menus or buttons for the main actions
+- support Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Shift+S, Ctrl+W, Ctrl+F, Ctrl+H,
+  and Ctrl+Tab for the corresponding actions
+
+large-file behavior:
+- handle the supplied UTF-8 fixtures up to 100 MiB, including a file
+  with at least one million short lines
+- render only visible content rather than laying out the whole document
+  on every frame; long lines must not force full-line work on every frame
+- loading, saving, searching, and replace-all must not block the UI thread
+  for long periods; show progress or a busy indicator for lengthy work
+- searches must be cancellable and must not display stale results after edits
+- keep repainting and unrelated tabs responsive during background operations
+- it is acceptable to temporarily disable editing in an affected document,
+  but make this visible and do not silently drop input
+- scrolling, cursor movement, and ordinary edits must remain responsive
+  after loading; avoid full-document rescans for each keystroke
+- if editing remains enabled during a save, save a consistent snapshot
+  and keep later changes marked as unsaved
+- document the buffer design, indexing strategy, and memory trade-offs
+
+no syntax highlighting, language server, plugins, terminal, or rich-text
+formatting is required. prioritize correct editing, data safety, and
+large-file responsiveness.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Files and tabs | Open, create, save, and reopen documents correctly; preserve supported encoding/line endings and independent tab state; handle unsaved changes and file errors safely. |
+| Editing and selection | Correct keyboard/mouse navigation, selection, insertion, deletion, and clipboard operations, including Unicode and multiline text. |
+| Undo and redo | Restore edits, cursor, and selection correctly; handle grouped typing, paste, redo branching, and saved-state tracking. |
+| Find and replace | Correct match counts, highlighting, navigation, case handling, replacement, and undoable replace-all. |
+| Large-file responsiveness | Load and edit the large-file (100MB), scroll through them, and perform background operations without freezing the interface or corrupting data. |
