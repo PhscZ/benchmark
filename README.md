@@ -443,3 +443,64 @@ large-file responsiveness.
 | Undo and redo | Restore edits, cursor, and selection correctly; handle grouped typing, paste, redo branching, and saved-state tracking. |
 | Find and replace | Correct match counts, highlighting, navigation, case handling, replacement, and undoable replace-all. |
 | Large-file responsiveness | Load and edit the large-file (100MB), scroll through them, and perform background operations without freezing the interface or corrupting data. |
+
+### 5. Authenticated Web Scraper in Python
+
+```text
+write a Python program that logs into https://plazmaburst2.com/ and
+scrape the map information from this page using the authenticated session:
+https://plazmaburst2.com/?s=9&id=5
+
+credentials for the benchmark:
+login = "login"
+password = "password"
+
+do not hardcode these credentials, save them in a .env file
+
+authentication:
+- inspect and use the website's actual login flow
+- handle required form fields, cookies, redirects, and CSRF tokens
+- verify that login succeeded before attempting authenticated scraping;
+  an HTTP 200 response alone is not proof of a successful login
+- reuse the authenticated session for subsequent requests
+- do attempt to bypass simple CAPTCHAs if necessary
+
+scraping:
+- display these fields for the map:
+  - map name
+  - map ID
+  - votes
+  - map description
+  - map designer
+- also download the page and save it in an easy to access way, with hardcoded/defined values
+
+output:
+- display results in a readable terminal format with all five fields
+- also save the results as a UTF-8 JSON array
+- a .html file, with any dependencies (images, css, etc)
+
+reliability:
+- use request timeouts and bounded retries for transient failures
+- respect rate limits and Retry-After responses
+- avoid excessive concurrent requests
+- keep TLS certificate verification enabled
+- report network, authentication, and parsing errors clearly
+- never overwrite an existing successful export with results from a
+  failed login or failed listing fetch
+
+prefer an HTTP session and HTML parser when sufficient. browser automation
+is allowed if the website requires it.
+
+provide complete source, pinned dependencies, setup/run instructions,
+and a brief explanation of the login verification and extraction logic.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Fundamentals | Save anything at all. |
+| Authentication | Log in with the supplied test account, verify success, and reuse the authenticated session. |
+| Field accuracy | Correctly extract map name, map ID, votes, description, and designer. |
+| HTML page | Save a snapshot of the HTML page for the linked map. |
+| Completeness | Save the extra details regarding the webpage, such as the map preview image. |
