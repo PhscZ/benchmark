@@ -245,9 +245,6 @@ support selecting total, 1v1, or pub statistics where applicable.
 the API must be fully functional, fast, and data efficient when processing
 the existing event history and serving queries. provide complete source,
 build/run instructions, and API usage examples.
-
-results will be evaluated for functional correctness, processing and
-query speed, and numerical agreement with my original system.
 ```
 
 #### Test tasks
@@ -261,3 +258,87 @@ The API must successfully process the existing event history and return correct 
 | Individual player | Return the specified player's ratings and statistics. |
 | Player matchups | Return paginated statistics against other players. |
 | Head-to-head | Return the specified player's statistics against one specific opponent. |
+
+### 3. Cross-Platform Flappy Bird–Style Game in Rust
+
+```text
+write a complete 2D Flappy Bird-style game in Rust, sharing the gameplay
+code between a native Windows desktop build and a WebAssembly build
+that runs in desktop and mobile browsers. no native mobile app is required.
+
+provide complete source, pinned dependencies, and commands for building
+and running both versions, including serving the web build locally.
+
+gameplay:
+- the player controls a bird that moves vertically under gravity
+- each flap gives the bird an upward impulse
+- pipes move from right to left with a gap for the bird to pass through
+- generate randomized but reasonably playable pipe gaps
+- award one point for each pipe pair successfully passed
+- hitting a pipe, the ground, or the top boundary ends the run
+- use consistent collision bounds that match the visible objects
+- movement, spawning, and physics must be frame-rate independent
+- remove or reuse off-screen pipes so memory usage remains bounded
+
+game states:
+- a ready screen with the title and control instructions
+- active gameplay with the current score visible
+- pause/resume
+- a game-over screen showing the score, best score, and restart control
+- restarting must reset all gameplay state without restarting the app
+  or reloading the page
+
+controls:
+- desktop: space, up arrow, or left mouse click to flap
+- mobile browser: tap to flap
+- provide an on-screen pause/resume button usable with mouse or touch
+- support P or Escape for pause/resume on desktop
+- one physical input must produce only one flap; avoid keyboard-repeat
+  flaps and duplicate touch/mouse events
+- interacting with menu buttons must not also trigger a gameplay flap
+
+display and mobile support:
+- use a fixed logical gameplay area with responsive scaling and
+  letterboxing so resizing does not change gameplay difficulty
+- support desktop window resizing and mobile portrait/landscape layouts
+- keep controls and score readable and within the visible screen
+- prevent touch scrolling and zoom gestures on the game surface
+  without disabling normal behavior elsewhere on the page
+- pause when the native window loses focus or the browser tab is hidden
+- do not advance gameplay while suspended or apply a large physics step
+  when returning; require explicit resume
+
+presentation:
+- provide a cohesive visual style with a bird, pipes, background,
+  ground, readable text, and visible buttons
+- use original, procedurally generated, or permissively licensed assets;
+  do not require copyrighted Flappy Bird assets or external asset downloads
+- include flap, score, and collision sounds, plus a mute control
+- initialize browser audio after a user interaction and handle unavailable
+  audio gracefully without preventing gameplay
+
+persistence:
+- save the best score and mute setting between sessions
+- use local storage in browsers and an appropriate local file natively
+- if storage is unavailable or corrupted, use safe defaults and keep
+  the game playable
+
+the web build must work in current Chrome, Firefox, and Edge on desktop,
+Chrome on Android, and Safari on iOS. no backend, account, or network
+connection is required after the game assets have loaded.
+
+aim for smooth 60 FPS gameplay on the specified evaluation devices.
+document the build process, controls, framework choice, and any known
+platform limitations. provide the web page and all assets needed to
+serve the WebAssembly build.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Native desktop | Build and launch on Windows; complete a run using keyboard and mouse controls. |
+| Desktop browser | Build and serve the WebAssembly version; complete a run with working graphics, audio after interaction, and controls. Google Chrome/Chromium. |
+| Desktop browser | Build and serve the WebAssembly version; complete a run with working graphics, audio after interaction, and controls. Firefox. |
+| Mobile browser | Play using touch on Android and iOS; resizing and orientation changes preserve usability without page scrolling or duplicate flaps. |
+| Gameplay and lifecycle | Verify scoring, collisions, pause/resume, focus handling, and repeated restarts without stale state or accumulating off-screen objects. |
