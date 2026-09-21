@@ -165,8 +165,8 @@ use these defaults:
 - tau: 0.5
 
 use player logins as identifiers throughout the system.
-exclude any event where the killer or victim is ".nobody" from all
-rating calculations and statistics.
+exclude any event where the killer or victim is ".nobody" or ".self" from
+all rating calculations and statistics, this should be configurable.
 
 a match is a race to 20 kills between two specific players, equivalent
 to a best of 39. a player wins when they kill that opponent 20 times.
@@ -260,13 +260,21 @@ formatting similar to:
 
 also add swagger UI support, so it is easy to check and test the
 endpoints created by this project.
+
+there should also be a way to feed alt-accounts for players, and separated
+endpoints considering alt-accounts or not, add a prefix /noalt/ to the
+endpoints that do not consider this system, it should also account for
+players who are added to the system after getting kills and deaths with
+such account, and it should recalculate accordingly.
+this is an example of the alt JSON:
+[{"alt": "fck", "id": 57, "main": "deadlyenergy"}, {"alt": "orinslc", "id": 56, "main": "orinslc56"}]
 ```
 
 #### Test tasks
 
 | Task | Required behavior |
 |---|---|
-| Event import | Parse and process all events stored in the current system, excluding `.nobody` from calculations and statistics. |
+| Event import | Parse and process all events stored in the current system. Excluding the excluded users and applying the alt system. |
 | Leaderboard | Return a leaderboard page with the required ratings and statistics. |
 | Individual player | Return the specified player's ratings and statistics. |
 | Player matchups | Return paginated statistics against other players. |
