@@ -119,25 +119,10 @@ own input from stdin in a separate execution. generated programs must
 support binary stdin/stdout without Windows newline translation or
 Ctrl-Z EOF handling; runtime initialization calls may be used for this.
 
-the compiler must compile C implementations of these utilities, and the
-generated executables must produce correct results:
-
-- cat: copy all input bytes unchanged to stdout, including NUL bytes
-- wc: print line, word, and byte counts as decimal numbers separated by
-  single spaces and followed by a newline. lines are counted by '\n';
-  words are runs separated by ASCII space, tab, newline, carriage return,
-  form feed, or vertical tab
-- rev: reverse bytes within each line, preserving the terminating '\n'
-  when present and preserving a missing final newline
-- base64: encode arbitrary bytes using the standard Base64 alphabet and
-  '=' padding, without line wrapping or an added trailing newline
-- strings: output runs of at least 4 printable ASCII bytes (32 through 126),
-  with each qualifying run followed by '\n', including runs ending at EOF
-
 no file arguments, utility flags, Unicode processing, or Base64 decoding
-are required. handle empty input and non-ASCII bytes correctly. rev and
-strings must support lines/runs up to 65536 bytes; total input must not
-be restricted to that size.
+are required. handle empty input and non-ASCII bytes correctly.
+
+the compiler must compile C implementations of simple utilities.
 ```
 
 #### Test tasks
