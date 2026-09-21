@@ -134,8 +134,6 @@ be restricted to that size.
 
 #### Test tasks
 
-The compiler must successfully compile programs implementing the following utilities. The resulting executables must run and produce correct output.
-
 | Task | Required behavior |
 |---|---|
 | `cat` | Copy stdin to stdout. |
@@ -248,8 +246,6 @@ build/run instructions, and API usage examples.
 ```
 
 #### Test tasks
-
-The API must successfully process the existing event history and return correct data.
 
 | Task | Required behavior |
 |---|---|
@@ -578,3 +574,120 @@ safety and reliability:
 | False-positive control | Keep distinct images separate, including visually similar scenes and unrelated images with similar colors. |
 | Reporting and size accounting | Choose retained originals deterministically and report duplicate counts and total bytes without counting originals or hard links twice. |
 | Robustness and scale | Handle recursive folders, Unicode paths, corrupted files, empty results, and a large image collection without crashing or excessive memory use. |
+
+### 7. 3D Racing Game in JavaScript
+
+```text
+write a complete browser-based 3D racing game in JavaScript with
+believable vehicle handling, a working gearbox, and a playable race.
+
+use Three.js or another JavaScript 3D rendering library. a physics
+library is allowed, but do not embed an existing racing game.
+provide complete source, pinned dependencies, and setup/run instructions.
+
+target desktop browsers with keyboard controls. support current Chrome,
+Firefox, and Edge. mobile support and multiplayer are not required.
+no backend or external asset downloads should be needed during gameplay.
+
+vehicle simulation:
+- implement acceleration, braking, coasting, steering, and reverse
+- model engine RPM, a torque curve, gear ratios, final drive,
+  wheel radius, and aerodynamic and rolling resistance
+- provide at least five forward gears, neutral, and reverse
+- gear selection must affect acceleration, engine RPM, and top speed;
+  do not implement gears as a cosmetic HUD change
+- include engine idle, a redline, and a rev limiter
+- implement a brief torque interruption during gear changes
+- prevent unsafe shifts into reverse while moving forward
+- support both automatic and sequential manual transmission
+- manual clutch operation, engine damage, and stalling are not required
+- use a simplified tire-grip model with believable lateral traction,
+  speed-dependent steering, and reduced grip on grass
+- allow loss of traction under excessive cornering or acceleration
+- implement suspension response and visible body pitch/roll
+- use a fixed physics timestep with rendering interpolation;
+  handling must not depend on rendering frame rate
+
+track and race:
+- provide one complete closed circuit with straights, slow corners,
+  fast corners, grass/runoff areas, and solid barriers
+- provide a controllable car and at least three AI opponents
+- AI cars must follow the circuit, brake for corners, and complete laps
+  using the same vehicle physics and grip rules as the player
+- include collisions with barriers and other cars without routinely
+  allowing cars to pass through them
+- provide a countdown followed by a three-lap race
+- count laps using ordered checkpoints so reversing across the finish
+  or cutting across the circuit does not award a lap
+- show race position based on lap count and progress around the track
+- track current lap time, last lap time, best lap time, and total race time
+- end the race with a results screen and restart option
+- provide a reset control for a stuck or overturned car, placing it
+  safely near its last valid track position without advancing progress
+- apply a visible five-second race-time penalty for each reset
+
+controls and interface:
+- W/Up: throttle
+- S/Down: brake; in reverse gear, apply reverse throttle near standstill
+- A/D or Left/Right: steer
+- E/Q or shift/control: shift up/down in manual mode
+- provide explicit controls for selecting neutral and reverse
+- provide a control to switch automatic/manual transmission
+- C: change camera
+- R: reset car
+- Escape: pause/resume
+- display all controls on a help screen
+- smooth keyboard steering and throttle inputs rather than applying
+  instantaneous full steering angle
+
+HUD:
+- speed in km/h
+- engine RPM and rev counter
+- current gear and transmission mode
+- race position and current lap
+- current, last, and best lap times
+- final race time
+
+presentation:
+- provide a cohesive, realistic visual style with correctly scaled cars,
+  road markings, terrain, lighting, shadows, and trackside scenery
+- include rotating wheels and visibly steered front wheels
+- provide a smooth chase camera and a hood camera
+- keep the chase camera usable near barriers and during collisions
+- include engine audio whose pitch responds to RPM, plus braking/skid
+  and collision sounds
+- provide volume and mute controls
+- initialize browser audio after user interaction and handle unavailable
+  audio gracefully
+- use original, procedurally generated, or permissively licensed assets,
+  with attribution where required
+
+lifecycle and performance:
+- provide a start menu, pause menu, and race results screen
+- pause when the browser tab is hidden or the window loses focus
+- clear held inputs on focus loss and require explicit resume
+- restarting must reset cars, timers, checkpoints, penalties, and race state
+  without reloading the page
+- support window resizing and configurable graphics quality
+- aim for 60 FPS at 1920x1080 on the specified evaluation hardware
+- repeated restarts must not accumulate objects, event handlers,
+  audio sources, or GPU resources
+- save best lap times and settings locally, and continue working if
+  browser storage is unavailable
+
+provide a short explanation of the vehicle model, units, gearbox,
+AI driving logic, and known simplifications. include a debug overlay
+showing speed, RPM, gear ratio, and physics timestep so the simulation
+can be checked. prioritize a complete, believable racing experience
+over claiming professional simulator accuracy. aim for at least 60 FPS.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Launch and presentation | Launch in the specified browsers with a complete 3D track, working menus, cameras, HUD, audio after interaction, and responsive resizing. |
+| Vehicle and gearbox | Acceleration, braking, steering, grip, and collisions work believably; manual/automatic gears materially affect RPM and performance; neutral and reverse behave correctly. |
+| Race and AI | Complete a three-lap race against three functioning opponents, with correct checkpoints, lap timing, position tracking, reset penalties, and results. |
+| Controls and lifecycle | All documented controls work; pause, focus loss, resume, reset, and repeated restarts preserve correct state without stuck inputs or unintended progress. |
+| Performance and persistence | Meet predefined frame-time limits on fixed hardware; repeated races do not cause sustained resource growth; settings and best laps persist, with graceful storage/audio failure handling. |
