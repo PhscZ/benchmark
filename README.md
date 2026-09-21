@@ -691,3 +691,114 @@ over claiming professional simulator accuracy. aim for at least 60 FPS.
 | Race and AI | Complete a three-lap race against three functioning opponents, with correct checkpoints, lap timing, position tracking, reset penalties, and results. |
 | Controls and lifecycle | All documented controls work; pause, focus loss, resume, reset, and repeated restarts preserve correct state without stuck inputs or unintended progress. |
 | Performance and persistence | Meet predefined frame-time limits on fixed hardware; repeated races do not cause sustained resource growth; settings and best laps persist, with graceful storage/audio failure handling. |
+
+### 8. Browser Image Editor in JavaScript
+
+```text
+write a browser-based image editor in JavaScript with image loading,
+transformations, drawing, color adjustments, undo/redo, and export.
+
+use Canvas APIs or a suitable rendering library, but do not embed an
+existing image editor. provide complete source, pinned dependencies,
+and setup/run instructions.
+
+support current Chrome, Firefox, and Edge on desktop. all image
+processing must happen locally without uploading images to a server.
+
+image loading:
+- open JPEG, PNG, and WebP through a file picker or drag and drop
+- correctly apply EXIF orientation without rotating the image twice
+- preserve transparency where supported
+- show image dimensions and the current zoom level
+- report unsupported or corrupted files without losing the current image
+- warn before replacing an image with unexported changes
+- support images up to 4096x4096 pixels
+
+viewport:
+- provide zoom in/out, fit-to-window, and actual-size views
+- support panning when the image extends beyond the viewport
+- show a checkerboard behind transparent areas
+- keep editing coordinates correct at every zoom and pan position
+- zooming, panning, and resizing the browser window must not modify
+  the image or create undo steps
+
+transformations:
+- crop using a draggable rectangle with resize handles
+- support freeform and locked-aspect-ratio cropping
+- allow entering exact crop coordinates and dimensions in image pixels
+- resize to exact pixel dimensions, with optional aspect-ratio locking
+- rotate 90 degrees clockwise, 90 degrees counterclockwise, and 180 degrees
+- mirror horizontally by swapping left and right
+- mirror vertically by swapping top and bottom
+- apply transformations to the complete current image, including drawings
+- update document dimensions correctly after cropping, resizing, or rotation
+- allow crop previews to be applied or cancelled without unwanted changes
+
+drawing tools:
+- provide a freehand brush with adjustable size, color, and opacity
+- provide an eraser that removes pixels to transparency rather than
+  painting them white
+- provide straight-line, rectangle, and ellipse tools
+- allow shapes to use an outline, a fill, or both
+- provide an eyedropper to sample a pixel's color
+- show a tool cursor or preview that reflects brush size and placement
+- treat one pointer drag as one undoable drawing action
+- brush size must be defined in image pixels, independent of zoom
+
+image adjustments:
+- provide brightness and contrast controls with neutral defaults
+- provide grayscale and color-inversion actions
+- preserve alpha when changing colors
+- show adjustment previews without repeatedly compounding the effect
+- allow applying or cancelling adjustments
+- document the adjustment formulas and slider ranges so results
+  can be checked against reference calculations
+
+undo and redo:
+- support Ctrl+Z and Ctrl+Y, plus visible undo/redo buttons
+- undo transformations, drawings, erasing, and applied adjustments
+- restore pixel content and document dimensions correctly
+- editing after undo must discard the redo branch
+- support at least 20 undoable operations for images up to 1920x1080
+- bound history memory usage and document the limit; for larger images,
+  older history may be evicted with a visible notice
+- export must not clear undo history
+
+export:
+- export the full edited image as PNG or JPEG, not a screenshot
+  of the visible viewport
+- preserve transparency in PNG
+- for JPEG, flatten transparency onto a user-selected background color,
+  defaulting to white
+- provide a JPEG quality control and filename input
+- ensure exported dimensions match the current document dimensions
+- do not include selection handles, checkerboards, or other interface
+  overlays in exported images
+- allow exported files to be reopened for further editing
+
+interface and reliability:
+- provide clearly labeled tools, controls, and keyboard shortcuts
+- show active tool, image dimensions, and zoom level
+- disable unavailable actions rather than failing silently
+- reject invalid dimensions and out-of-bounds crop values clearly
+- provide progress or a busy state during expensive operations
+- keep the interface responsive and prevent conflicting edits while
+  an operation is running
+- release obsolete image resources and object URLs when no longer needed
+- repeated loading, editing, and exporting must not cause sustained
+  memory growth outside the documented history budget
+
+layers, text tools, animated image editing, RAW files, and advanced
+color-profile management are not required. use a single raster document
+and evaluate color operations using supplied sRGB fixtures.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Image loading and viewport | Open supplied images with correct dimensions, orientation, and transparency; zoom and pan without altering pixels; handle invalid files safely. |
+| Transformations | Crop and resize to exact dimensions; rotate correctly; mirror left/right and top/bottom correctly, including existing drawings. |
+| Drawing and adjustments | Apply brushes, erasing, shapes, and color adjustments correctly at different zoom levels; cancelled previews leave the image unchanged. |
+| Undo and redo | Restore pixels and dimensions through a mixed sequence of operations; correctly handle redo branching, cancelled actions, and history limits. |
+| Export and reliability | Export and reopen PNG/JPEG with correct dimensions, transparency or background flattening, and no UI overlays; handle large images and repeated operations within predefined resource limits. |
