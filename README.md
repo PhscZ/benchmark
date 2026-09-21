@@ -251,6 +251,15 @@ support selecting total, 1v1, or pub statistics where applicable.
 the API must be fully functional, fast, and data efficient when processing
 the existing event history and serving queries. provide complete source,
 build/run instructions, and API usage examples.
+
+make sure it is easy to import events from an external .json file, with
+formatting similar to:
+[{"id": "e5", "time": "2026-05-16T18:36:04Z", "killer": "nicolas404", "victim": "orinslc", "player_count": 3},
+{"id": "e10", "time": "2026-05-16T18:36:25Z", "killer": "nicolas404", "victim": "orinslc", "player_count": 3},
+{"id": "e11", "time": "2026-05-16T18:36:25Z", "killer": "orinslc", "victim": "nicolas404", "player_count": 2}]
+
+also add swagger UI support, so it is easy to check and test the
+endpoints created by this project.
 ```
 
 #### Test tasks
