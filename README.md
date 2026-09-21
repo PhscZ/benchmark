@@ -504,3 +504,77 @@ and a brief explanation of the login verification and extraction logic.
 | Field accuracy | Correctly extract map name, map ID, votes, description, and designer. |
 | HTML page | Save a snapshot of the HTML page for the linked map. |
 | Completeness | Save the extra details regarding the webpage, such as the map preview image. |
+
+### 6. Near-Duplicate Image Finder in Python
+
+```text
+write a Python program that scans a folder for exact and near-duplicate
+images, even when their files are not byte-for-byte identical.
+
+provide complete source, pinned dependencies, and setup/run instructions.
+
+input:
+- accept the folder path as a command-line argument
+- support optional recursive scanning of subfolders
+- support JPEG, PNG and WebP
+- handle paths containing spaces and Unicode characters
+- do not follow directory symlinks
+
+image comparison:
+- detect byte-identical files and visually equivalent images stored
+  with different compression, metadata, formats, or resolutions
+- detect minor brightness/color changes without treating unrelated
+  images with similar colors as duplicates
+- normalize EXIF orientation before comparison
+- handle transparency consistently and document the approach
+- use image content rather than filenames, timestamps, or file sizes
+- use perceptual hashing or another suitable similarity method
+- expose a configurable similarity threshold with a documented default
+  and explain whether higher values mean stricter or looser matching
+- cropping, watermarks, and arbitrary rotations do not need to match
+
+grouping:
+- group matching images and choose one original to keep per group
+- prefer the image with the largest pixel area, then the largest file
+  size, then the lexicographically smallest full path to break ties
+- each listed duplicate must meet the similarity threshold against
+  its group's retained original; do not group unrelated endpoints
+  solely through a chain of intermediate matches
+- assign each file to at most one group
+- produce deterministic results for the same files and settings
+
+output:
+- list each duplicate group with the retained original clearly marked
+- show each file's path, dimensions, and size in bytes
+- show the similarity distance or score against the retained original
+- distinguish byte-identical duplicates from perceptual matches
+- report the number of scanned files, successfully processed images,
+  skipped files, duplicate groups, and duplicate files
+- report the total size of duplicate files, excluding the one retained
+  original in each group
+- show this total in exact bytes and human-readable units
+- describe it as potential savings based on logical file sizes, not
+  guaranteed disk space recovered
+
+safety and reliability:
+- this is a read-only tool; do not delete, rename, or modify any files
+- count hard links to the same underlying file only once
+- skip unsupported, corrupted, or unreadable files with a warning,
+  without terminating the entire scan
+- handle empty folders and folders containing no duplicates
+- keep memory bounded by processing images incrementally and retaining
+  compact comparison data rather than all decoded images
+- show progress for large scans
+- use candidate filtering or indexing to avoid unnecessary full
+  pairwise comparisons, and document performance limitations
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Exact duplicates | Detect identical image files with different names or locations and group them correctly. |
+| Near duplicates | Detect resized, recompressed, format-converted, and mildly color-adjusted copies. |
+| False-positive control | Keep distinct images separate, including visually similar scenes and unrelated images with similar colors. |
+| Reporting and size accounting | Choose retained originals deterministically and report duplicate counts and total bytes without counting originals or hard links twice. |
+| Robustness and scale | Handle recursive folders, Unicode paths, corrupted files, empty results, and a large image collection without crashing or excessive memory use. |
