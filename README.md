@@ -16,11 +16,12 @@ Models are evaluated on whether their software runs and correctly completes the 
   - [2. Glicko-2 REST API in Rust](#2-glicko-2-rest-api-in-rust)
   - [3. Cross-Platform Flappy Bird–Style Game in Rust](#3-cross-platform-flappy-birdstyle-game-in-rust)
   - [4. Desktop Text Editor in Rust](#4-desktop-text-editor-in-rust)
-  - [5. Authenticated Web Scraper in Python](#5-authenticated-web-scraper-in-python)
-  - [6. Near-Duplicate Image Finder in Python](#6-near-duplicate-image-finder-in-python)
-  - [7. 3D Racing Game in JavaScript](#7-3d-racing-game-in-javascript)
-  - [8. Browser Image Editor in JavaScript](#8-browser-image-editor-in-javascript)
-  - [9. Memory Allocator in C](#9-memory-allocator-in-c)
+  - [5. GPU Ray Tracer in Rust Using Vulkan](#5-gpu-ray-tracer-in-rust-using-vulkan)
+  - [6. Authenticated Web Scraper in Python](#5-authenticated-web-scraper-in-python)
+  - [7. Near-Duplicate Image Finder in Python](#6-near-duplicate-image-finder-in-python)
+  - [8. 3D Racing Game in JavaScript](#7-3d-racing-game-in-javascript)
+  - [9. Browser Image Editor in JavaScript](#8-browser-image-editor-in-javascript)
+  - [10. Memory Allocator in C](#9-memory-allocator-in-c)
 
 ## Scoring
 
@@ -507,6 +508,198 @@ and a brief explanation of the login verification and extraction logic.
 | Field accuracy | Correctly extract map name, map ID, votes, description, and designer. |
 | HTML page | Save a snapshot of the HTML page for the linked map. |
 | Completeness | Save the extra details regarding the webpage, such as the map preview image. |
+
+### 5. GPU Ray Tracer in Rust Using Vulkan
+
+
+```text
+write a desktop GPU ray tracer in Rust using Vulkan compute shaders.
+render one fixed scene in a window; no scene loader is required.
+
+target Windows x64 and an AMD Radeon RX 5700 XT with Vulkan 1.2 support.
+hardware ray-tracing extensions must not be required.
+do not use VK_KHR_ray_tracing_pipeline or VK_KHR_acceleration_structure.
+
+implement ray generation, intersections, shading, shadows, reflections,
+and sample accumulation on the GPU. do not render on the CPU or substitute
+rasterization for ray tracing.
+
+Rust Vulkan bindings, windowing, math, image encoding, interface, and
+shader compilation libraries are allowed. do not embed an existing
+renderer or game engine. GLSL compute shaders compiled to SPIR-V are
+allowed; host code must be written in Rust.
+
+provide complete source, pinned dependencies, shader sources, and
+build/run instructions. compile shaders as part of the build.
+document the required Vulkan SDK and driver capabilities.
+
+fixed scene:
+- use a right-handed coordinate system with Y pointing upward
+- build an open-front room spanning:
+  - X: -3 to 3
+  - Y: 0 to 6
+  - Z: -3 to 3
+- leave the front at Z = 3 open
+- construct the floor, ceiling, back wall, and two side walls from
+  two triangles each, for ten triangles in total
+- use these linear RGB base colors:
+  - left wall at X = -3: (0.65, 0.05, 0.05)
+  - right wall at X = 3: (0.05, 0.65, 0.05)
+  - floor, ceiling, and back wall: (0.75, 0.75, 0.75)
+- place three spheres:
+  - matte blue: center (-1.6, 1.0, -0.8), radius 1.0
+  - glossy gold: center (1.4, 1.0, -1.0), radius 1.0
+  - mirror: center (0.0, 0.75, 1.0), radius 0.75
+- use one white point light at (0.0, 5.5, 1.0),
+  with RGB intensity (60.0, 60.0, 60.0)
+- use a black background outside the room
+- do not require external models, textures, or downloaded assets
+
+camera:
+- initial position: (0.0, 3.0, 10.0)
+- look-at target: (0.0, 2.5, 0.0)
+- up vector: (0.0, 1.0, 0.0)
+- vertical field of view: 45 degrees
+- initial render resolution: 1280x720
+- generate perspective rays with the correct aspect ratio
+- provide mouse orbit and zoom controls, with documented limits,
+  plus a reset-to-default-camera control
+- include a fixed-camera benchmark mode
+
+GPU intersections:
+- represent spheres analytically, not as tessellated meshes
+- implement ray-sphere and ray-triangle intersections in compute shaders
+- test all scene primitives and select the nearest valid intersection
+- brute-force intersection testing is sufficient for this small scene;
+  a BVH is not required
+- accept hits only within a specified ray-distance interval
+- handle rays originating inside spheres, tangent hits, parallel rays,
+  and misses safely
+- use two-sided triangles and orient shading normals against
+  the incoming ray
+- use deterministic primitive ordering to resolve equal-distance hits
+- offset secondary-ray origins using a documented numerical tolerance
+  to avoid self-intersection without visibly detached shadows
+- provide GPU intersection tests using known rays with results read
+  back to the CPU for verification
+
+materials and lighting:
+- support Lambert diffuse, Blinn-Phong specular, and perfect mirror reflection
+- use ambient illumination of 0.02 multiplied by the base color
+- for direct lighting, use:
+  - N: oriented unit surface normal
+  - L: normalized direction toward the light
+  - V: normalized direction opposite the incoming ray
+  - H: normalize(L + V)
+  - attenuation: light intensity / squared distance to the light
+  - diffuse: baseColor * kd * max(dot(N, L), 0)
+  - specular: white * ks * pow(max(dot(N, H), 0), shininess)
+- set direct lighting to zero when dot(N, L) is not positive
+- handle a zero-length half-vector safely by using zero specular
+- local color = ambient + visibility * attenuation * (diffuse + specular)
+- final color = (1 - reflectivity) * local color
+  + reflectivity * reflected color
+- all color multiplications are component-wise
+
+material parameters:
+- walls: kd 1.0, ks 0.0, shininess 1, reflectivity 0.0
+- blue sphere: baseColor (0.05, 0.15, 0.8),
+  kd 1.0, ks 0.0, shininess 1, reflectivity 0.0
+- gold sphere: baseColor (0.8, 0.5, 0.1),
+  kd 0.8, ks 0.5, shininess 64, reflectivity 0.15
+- mirror sphere: baseColor (1.0, 1.0, 1.0),
+  kd 0.0, ks 0.0, shininess 1, reflectivity 1.0
+
+shadows and reflections:
+- cast hard-shadow rays with their maximum distance limited to the light
+- geometry behind the light must not cast a shadow
+- ambient illumination remains present in shadow
+- implement reflections with an iterative shader loop, not recursion
+- support zero through four reflection bounces after the primary ray
+- weight reflected contributions according to the material reflectivity
+- at the bounce limit, use black for the untraced reflected contribution
+- terminate rays that miss the scene or have zero remaining contribution
+
+color processing:
+- compute and accumulate lighting in linear RGB using 32-bit floats
+- average samples before applying exposure
+- apply Reinhard tone mapping component-wise: c / (1 + c)
+- convert the tone-mapped result to sRGB exactly once
+- default exposure is 1.0
+- use the same color processing for display and PNG export
+
+sampling and accumulation:
+- progressively accumulate samples in a floating-point GPU image
+- provide 1, 16, and 64 samples-per-pixel presets
+- use center-of-pixel sampling for the one-sample preset
+- use deterministic seeded subpixel sampling for higher presets
+- derive randomness from pixel coordinates, sample index, and seed
+- the same settings and seed must reproduce the same decoded image
+  pixels on the same build, GPU, and driver
+- stop accumulation when the selected sample count is reached
+- reset accumulation when the camera, render resolution, or sample
+  preset or reflection limit changes
+- exposure changes may reuse accumulated linear-color samples
+- keep sample count independent of display frame rate
+
+Vulkan implementation:
+- use a compute pipeline to trace rays and update the accumulation image
+- assign independent pixels to shader invocations without write races
+- bounds-check invocations at image edges
+- use a fullscreen presentation pass or image transfer to display the
+  computed image; rasterization is allowed only for presentation and UI
+- manage descriptors, image layouts, memory visibility, and synchronization
+  correctly between compute, presentation, and readback
+- validate required image-format features and device limits
+- use manageable dispatch batches rather than one excessively long
+  dispatch that risks a Windows GPU timeout
+- do not require disabling or increasing the system GPU timeout
+- correctly handle swapchain recreation and image-resource resizing
+- wait for GPU work before destroying resources still in use
+- provide an option to enable Vulkan validation layers
+- report unsupported capabilities clearly without silently falling back
+  to CPU rendering
+
+window and controls:
+- display the rendered image, accumulated sample count, resolution,
+  GPU name, and elapsed render time
+- provide controls for sample count, reflection limit, and exposure
+- provide start/restart rendering, camera reset, and save-PNG controls
+- save the image at its render resolution without interface overlays
+- clearly report whether an export contains a partial or completed render
+- handle resizing and minimization safely
+- keep the interface responsive during accumulation
+- repeated resizing and render restarts must not leak GPU resources
+
+benchmark mode:
+- render the default camera at 1280x720, 64 samples per pixel,
+  four reflection bounces, exposure 1.0, and seed 12345
+- perform one unmeasured warm-up render, clear accumulation, then perform
+  the measured render using the same settings
+- report initialization and pipeline-creation time separately
+- use Vulkan GPU timestamp queries to measure compute rendering work
+- also report wall-clock time to complete the measured accumulation,
+  including waiting for GPU completion
+- exclude PNG encoding and disk writes from rendering timings
+- save the final PNG and a machine-readable report containing the GPU,
+  driver, settings, completed sample count, and timing measurements
+- do not claim CPU submission time is GPU execution time
+
+global illumination, soft shadows, refraction, textures, denoising,
+and real-time 60 FPS rendering are not required.
+prioritize correct GPU ray tracing, Vulkan resource management,
+and reproducible output.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Vulkan initialization and presentation | Launch on a RX 5700 XT, render using Vulkan compute shaders without hardware ray-tracing extensions, and display the fixed scene and controls. |
+| Geometry and visibility | Pass known GPU ray-intersection tests and render the specified room and analytic spheres with correct perspective, nearest-hit visibility, normals, and silhouettes. |
+| Lighting and reflections | Produce the specified diffuse/specular shading, hard shadows, mirror reflections, bounce-limit behavior, tone mapping, and sRGB conversion. |
+| Sampling and interaction | Accumulate samples reproducibly; handle camera changes, settings, resizing, and restarts correctly; export PNGs without stale samples or interface overlays. |
+| Vulkan reliability and benchmarking | Complete the fixed benchmark with valid GPU and wall-clock timings; pass repeated resize/restart tests without validation errors, GPU timeouts, or sustained GPU-memory growth. |
 
 ### 6. Near-Duplicate Image Finder in Python
 
