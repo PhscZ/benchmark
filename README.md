@@ -16,7 +16,7 @@ Models are evaluated on whether their software runs and correctly completes the 
   - [2. Glicko-2 REST API in Rust](#2-glicko-2-rest-api-in-rust)
   - [3. Cross-Platform Flappy Bird–Style Game in Rust](#3-cross-platform-flappy-birdstyle-game-in-rust)
   - [4. Desktop Text Editor in Rust](#4-desktop-text-editor-in-rust)
-  - [5. GPU Ray Tracer in Rust Using Vulkan](#5-gpu-ray-tracer-in-rust-using-vulkan)
+  - [5. GPU Ray Tracer using Vulkan in Rust](#5-gpu-ray-tracer-using-vulkan-in-rust)
   - [6. Authenticated Web Scraper in Python](#5-authenticated-web-scraper-in-python)
   - [7. Near-Duplicate Image Finder in Python](#6-near-duplicate-image-finder-in-python)
   - [8. 3D Racing Game in JavaScript](#7-3d-racing-game-in-javascript)
@@ -351,9 +351,8 @@ serve the WebAssembly build.
 
 ```text
 write a desktop text editor in Rust for Windows with a custom text buffer
-and custom editing behavior. use GPUI for the desktop interface targetting
-windows x64, do not use an existing text-editing widget or editor engine
-for the document area.
+and custom editing behavior. use EGUI for the desktop interface, do not
+use an existing text-editing widget or editor engine for the document area.
 
 implement the document buffer yourself, such as a piece table, gap buffer,
 or rope. do not wrap a ready-made editor buffer library. avoid copying
@@ -509,8 +508,7 @@ and a brief explanation of the login verification and extraction logic.
 | HTML page | Save a snapshot of the HTML page for the linked map. |
 | Completeness | Save the extra details regarding the webpage, such as the map preview image. |
 
-### 5. GPU Ray Tracer in Rust Using Vulkan
-
+### 5. GPU Ray Tracer using Vulkan in Rust
 
 ```text
 write a desktop GPU ray tracer in Rust using Vulkan compute shaders.
