@@ -448,7 +448,7 @@ large-file responsiveness.
 | Find and replace | Correct match counts, highlighting, navigation, case handling, replacement, and undoable replace-all. |
 | Large-file responsiveness | Load and edit the large-file (100MB), scroll through them, and perform background operations without freezing the interface or corrupting data. |
 
-### 5. Authenticated Web Scraper in Python
+### 6. Authenticated Web Scraper in Python
 
 ```text
 write a Python program that logs into https://plazmaburst2.com/ and
@@ -701,7 +701,7 @@ and reproducible output.
 | Sampling and interaction | Accumulate samples reproducibly; handle camera changes, settings, resizing, and restarts correctly; export PNGs without stale samples or interface overlays. |
 | Vulkan reliability and benchmarking | Complete the fixed benchmark with valid GPU and wall-clock timings; pass repeated resize/restart tests without validation errors, GPU timeouts, or sustained GPU-memory growth. |
 
-### 6. Near-Duplicate Image Finder in Python
+### 7. Near-Duplicate Image Finder in Python
 
 ```text
 write a Python program that scans a folder for exact and near-duplicate
@@ -775,7 +775,7 @@ safety and reliability:
 | Reporting and size accounting | Choose retained originals deterministically and report duplicate counts and total bytes without counting originals or hard links twice. |
 | Robustness and scale | Handle recursive folders, Unicode paths, corrupted files, empty results, and a large image collection without crashing or excessive memory use. |
 
-### 7. 3D Racing Game in JavaScript
+### 8. 3D Racing Game in JavaScript
 
 ```text
 write a complete browser-based 3D racing game in JavaScript with
@@ -892,7 +892,7 @@ over claiming professional simulator accuracy. aim for at least 60 FPS.
 | Controls and lifecycle | All documented controls work; pause, focus loss, resume, reset, and repeated restarts preserve correct state without stuck inputs or unintended progress. |
 | Performance and persistence | Meet predefined frame-time limits on fixed hardware; repeated races do not cause sustained resource growth; settings and best laps persist, with graceful storage/audio failure handling. |
 
-### 8. Browser Image Editor in JavaScript
+### 9. Browser Image Editor in JavaScript
 
 ```text
 write a browser-based image editor in JavaScript with image loading,
@@ -1003,7 +1003,7 @@ and evaluate color operations using supplied sRGB fixtures.
 | Undo and redo | Restore pixels and dimensions through a mixed sequence of operations; correctly handle redo branching, cancelled actions, and history limits. |
 | Export and reliability | Export and reopen PNG/JPEG with correct dimensions, transparency or background flattening, and no UI overlays; handle large images and repeated operations within predefined resource limits. |
 
-### 9. Memory Allocator in C
+### 10. Memory Allocator in C
 
 ```text
 write a memory allocator in C implementing malloc, free, and realloc
