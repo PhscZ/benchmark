@@ -14,6 +14,13 @@ Models are evaluated on whether their software runs and correctly completes the 
 - [Challenges](#challenges)
   - [1. C Compiler in Rust](#1-c-compiler-in-rust)
   - [2. Glicko-2 REST API in Rust](#2-glicko-2-rest-api-in-rust)
+  - [3. Cross-Platform Flappy Bird–Style Game in Rust](#3-cross-platform-flappy-birdstyle-game-in-rust)
+  - [4. Desktop Text Editor in Rust](#4-desktop-text-editor-in-rust)
+  - [5. Authenticated Web Scraper in Python](#5-authenticated-web-scraper-in-python)
+  - [6. Near-Duplicate Image Finder in Python](#6-near-duplicate-image-finder-in-python)
+  - [7. 3D Racing Game in JavaScript](#7-3d-racing-game-in-javascript)
+  - [8. Browser Image Editor in JavaScript](#8-browser-image-editor-in-javascript)
+  - [9. Memory Allocator in C](#9-memory-allocator-in-c)
 
 ## Scoring
 
@@ -802,3 +809,106 @@ and evaluate color operations using supplied sRGB fixtures.
 | Drawing and adjustments | Apply brushes, erasing, shapes, and color adjustments correctly at different zoom levels; cancelled previews leave the image unchanged. |
 | Undo and redo | Restore pixels and dimensions through a mixed sequence of operations; correctly handle redo branching, cancelled actions, and history limits. |
 | Export and reliability | Export and reopen PNG/JPEG with correct dimensions, transparency or background flattening, and no UI overlays; handle large images and repeated operations within predefined resource limits. |
+
+### 9. Memory Allocator in C
+
+```text
+write a memory allocator in C implementing malloc, free, and realloc
+behavior without using the C runtime allocator internally.
+
+target 64-bit Windows with C17 and MinGW-w64 GCC.
+provide complete source, build/run instructions, and automated tests.
+
+expose this API:
+- void *my_malloc(size_t size);
+- void my_free(void *ptr);
+- void *my_realloc(void *ptr, size_t size);
+
+use prefixed names so the test harness can use the standard allocator
+independently. replacing the process-wide allocator is not required.
+
+memory acquisition:
+- acquire and release memory through VirtualAlloc and VirtualFree
+- do not use malloc, calloc, realloc, free, HeapAlloc, or equivalent
+  allocator libraries inside the implementation
+- do not perform one operating-system allocation per small allocation;
+  acquire larger regions and manage blocks within them
+- dedicated regions for large allocations are allowed
+- store allocator metadata in memory you manage
+- check operating-system failures and arithmetic overflow
+
+allocation:
+- return a pointer to at least the requested number of usable bytes
+- align returned pointers to _Alignof(max_align_t)
+- live allocations must never overlap
+- allocated memory does not need to be zero-initialized
+- return NULL if an allocation cannot be satisfied
+- define my_malloc(0) to return NULL
+- reject impossible sizes safely instead of wrapping size calculations
+- do not impose a small fixed limit on allocation count or total capacity
+
+freeing:
+- my_free(NULL) must do nothing
+- make freed blocks available for reuse
+- split oversized free blocks when the remainder can hold a valid block
+- coalesce physically adjacent free blocks within the same region
+- do not merge blocks across unrelated regions
+- release completely unused regions back to the operating system;
+  retaining at most one empty normal-sized region for reuse is allowed
+- double-free and invalid pointers are outside the required contract;
+  document them as undefined behavior
+
+reallocation:
+- my_realloc(NULL, size) must behave like my_malloc(size)
+- my_realloc(ptr, 0) must free ptr and return NULL
+- preserve the first min(old_requested_size, new_size) bytes
+- shrinking must keep the same pointer and make a sufficiently large
+  remainder available for reuse
+- support growing in place when the immediately following free block
+  provides enough space
+- otherwise allocate another block, copy the preserved bytes,
+  and free the original block
+- if growth fails, return NULL and leave the original allocation
+  and its contents valid and unchanged
+- a failed realloc must not leak a temporary allocation
+
+design and diagnostics:
+- implement and document the block layout, alignment rules,
+  free-block search strategy, splitting, and coalescing
+- single-threaded operation is sufficient; document that the allocator
+  is not thread-safe
+- provide debug-only validation of region boundaries, block alignment,
+  free-list consistency, and nonoverlapping blocks
+- provide debug statistics for live allocations, requested live bytes,
+  managed free bytes, and operating-system region allocations/releases
+- keep debug validation separate from release performance measurements
+- make the operating-system allocation layer injectable in tests so
+  allocation failures can be triggered deterministically
+
+tests:
+- test tiny allocations, alignment boundaries, large allocations,
+  zero sizes, and requests near SIZE_MAX
+- fill allocations with known byte patterns and check that unrelated
+  allocations and reallocations do not corrupt them
+- test freeing blocks in different orders, reuse, splitting,
+  adjacent-block coalescing, and empty-region release
+- test realloc shrinking, in-place growth, moved growth, and failure
+- include a deterministic randomized sequence of allocations, frees,
+  and reallocations with integrity checks after each operation
+- include a benchmark reporting operation throughput, peak managed
+  memory, and operating-system allocation counts
+
+prioritize correctness and memory reuse over matching the performance
+of a production allocator. calloc, over-aligned allocations, garbage
+collection, and multithreaded support are not required.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Allocation and alignment | Allocate writable, correctly aligned, nonoverlapping blocks across a range of sizes. |
+| Freeing and reuse | Reuse freed memory, split blocks, coalesce adjacent blocks, and release empty regions according to the specified policy. |
+| Reallocation | Correctly shrink, grow in place, and move allocations while preserving their contents. |
+| Integrity under stress | Pass a fixed-seed randomized sequence of allocations, frees, and reallocations without corruption. |
+| Edge cases and failure safety | Handle zero sizes, null, impossible sizes, and injected OS allocation failures without crashes, leaks, or invalidating existing allocations. |
