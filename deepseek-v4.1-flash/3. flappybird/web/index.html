@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!--
+  Flappy Rust — web build.
+
+  Everything the game needs is in this page and ./pkg/. There are no external
+  requests: no CDN, no web fonts, no analytics, no network access at all after
+  the first load. The visuals are drawn procedurally by the Rust core and the
+  sounds are synthesised at runtime, so there are no asset files either.
+
+  Serving requirements:
+    * Serve this directory over HTTP(S). Opening it as a file:// URL will fail,
+      because browsers block fetching the .wasm module from the filesystem.
+    * The server MUST send `Content-Type: application/wasm` for .wasm files,
+      or browsers refuse to stream-compile the module. `serve.py` in this
+      directory does that; `python -m http.server` does not always.
+
+  Mobile notes:
+    * `touch-action: none` is set on the canvas only, so taps on the game
+      surface never scroll or zoom while the rest of the page behaves normally.
+    * The layout is a single full-viewport canvas. The game letterboxes itself
+      inside it, so portrait and landscape both work without a reflow, and the
+      score and buttons are always inside the visible area because they are
+      drawn inside the letterboxed play area.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Flappy Bird-style game in Rust, compiled to WebAssembly from the same gameplay core as the native build.">
+<meta name="theme-color" content="#101f27">
+<title>Flappy Rust</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #101f27;
+    /* Stop the rubber-band scroll/pull-to-refresh gesture from fighting the game. */
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* The canvas fills the viewport; the game letterboxes itself inside it. */
+  #game {
+    position: fixed;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* Taps on the game surface must not scroll or zoom. Scoped to the canvas
+       so normal page behaviour elsewhere is untouched. */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    /* Prevent iOS from treating a long press as a text selection. */
+    -webkit-touch-callout: none;
+    cursor: pointer;
+  }
+
+  #boot, #error {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    box-sizing: border-box;
+    text-align: center;
+    color: #cfe6ee;
+    background: #101f27;
+    font: 500 0.95rem/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+
+  #boot { transition: opacity 220ms ease-out; }
+  #boot[hidden], #error[hidden] { display: none; }
+
+  #error {
+    color: #ffd9d4;
+    background: #2a1214;
+    overflow: auto;
+  }
+  #error h1 { font-size: 1.05rem; margin: 0; color: #ff8a80; }
+  #error pre {
+    margin: 0;
+    max-width: 44rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.85rem;
+    color: #ffb4a8;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="game" width="360" height="640" aria-label="Flappy Rust game"></canvas>
+
+<div id="boot">Loading&hellip;</div>
+
+<div id="error" hidden>
+  <h1>Flappy Rust could not start</h1>
+  <pre id="error-detail"></pre>
+  <pre>This page must be served over HTTP, and the server must send
+Content-Type: application/wasm for .wasm files. See the note at the
+top of index.html.</pre>
+</div>
+
+<noscript>
+  <div id="boot" style="display:flex">Flappy Rust needs JavaScript enabled.</div>
+</noscript>
+
+<script type="module">
+  const boot = document.getElementById('boot');
+  const errorBox = document.getElementById('error');
+  const errorDetail = document.getElementById('error-detail');
+
+  function fail(what, err) {
+    boot.hidden = true;
+    errorBox.hidden = false;
+    errorDetail.textContent = what + (err ? '\n\n' + (err.stack || err.message || err) : '');
+    console.error(what, err);
+  }
+
+  // A clear message beats a blank page when the module or the canvas is missing.
+  if (!window.WebAssembly) {
+    fail('This browser does not support WebAssembly.');
+  } else {
+    try {
+      // `--target web` emits a module whose default export instantiates the
+      // .wasm file. It must be awaited before any exported function is called,
+      // or the wasm memory is still undefined.
+      const module = await import('./pkg/flappy_web.js');
+      await module.default();
+      module.start();
+      // `start` renders the first frame synchronously, so the title screen is
+      // already on the canvas by the time we get here.
+      boot.hidden = true;
+    } catch (err) {
+      fail('Could not load ./pkg/flappy_web.js.', err);
+    }
+  }
+</script>
+
+</body>
+</html>

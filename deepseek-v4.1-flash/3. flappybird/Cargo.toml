@@ -1,0 +1,54 @@
+[workspace]
+resolver = "2"
+members = ["crates/flappy_core", "crates/flappy_native", "crates/flappy_web"]
+# `cargo build` / `cargo run` at the root target the desktop game; the wasm
+# crate is built explicitly with `--target wasm32-unknown-unknown`.
+default-members = ["crates/flappy_core", "crates/flappy_native"]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+flappy_core = { path = "crates/flappy_core" }
+
+# --- native backend (Windows desktop) -------------------------------------
+winit = { version = "=0.30.13", default-features = false, features = ["rwh_06"] }
+softbuffer = "=0.4.8"
+rodio = { version = "=0.22.2", default-features = false, features = ["playback"] }
+
+# --- web backend (wasm32) -------------------------------------------------
+# wasm-bindgen is pinned exactly: the CLI in PATH must match the crate version
+# byte-for-byte or `wasm-bindgen` refuses to process the generated module.
+wasm-bindgen = "=0.2.126"
+js-sys = "=0.3.103"
+# Only the APIs the web backend actually calls. Touch events are deliberately
+# absent: the page listens to pointer events alone, so one tap cannot arrive
+# twice (once as touch, once as the browser's compatibility mouse event).
+web-sys = { version = "=0.3.103", features = [
+    "Window", "Document", "Element", "HtmlElement", "HtmlCanvasElement",
+    "CanvasRenderingContext2d", "ImageData", "CssStyleDeclaration", "DomRect",
+    "Storage", "AudioContext", "AudioContextState", "AudioBuffer",
+    "AudioBufferSourceNode", "AudioDestinationNode", "AudioNode", "AudioParam",
+    "GainNode", "Event", "EventTarget", "KeyboardEvent", "MouseEvent",
+    "PointerEvent", "VisibilityState", "console",
+] }
+console_error_panic_hook = "=0.1.7"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+# WebAssembly release profile: small binary, still fast. `panic = "abort"` is
+# only set here because it makes `cargo test --release` unusable elsewhere.
+[profile.wasm-release]
+inherits = "release"
+panic = "abort"
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

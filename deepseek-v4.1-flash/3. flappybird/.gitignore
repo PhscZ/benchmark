@@ -1,0 +1,8 @@
+# Rust build artefacts
+/target
+
+# Generated WebAssembly package (produced by scripts/build-web.*)
+/web/pkg
+
+# Throwaway visual-check output from `cargo run --example preview`
+/prev

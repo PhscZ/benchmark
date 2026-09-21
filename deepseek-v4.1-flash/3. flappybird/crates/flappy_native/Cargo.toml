@@ -1,0 +1,20 @@
+[package]
+name = "flappy_native"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Native Windows front-end: winit window, softbuffer presentation, rodio audio, file-backed settings."
+
+[[bin]]
+name = "flappy_bird"
+path = "src/main.rs"
+
+[dependencies]
+flappy_core = { workspace = true }
+
+# `rwh_06` is the raw-window-handle version softbuffer 0.4 requires.
+# The x11/wayland features are deliberately off: this target is Windows only.
+winit = { workspace = true }
+softbuffer = { workspace = true }
+rodio = { workspace = true }

@@ -1,0 +1,11 @@
+[package]
+name = "flappy_core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Shared gameplay, physics, input arbitration and software renderer for the Flappy Rust game."
+
+# Intentionally dependency-free: the core is pure `std` so it compiles
+# unchanged for x86_64-pc-windows-* and wasm32-unknown-unknown.
+[dependencies]
