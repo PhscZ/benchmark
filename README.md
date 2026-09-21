@@ -351,9 +351,9 @@ serve the WebAssembly build.
 
 ```text
 write a desktop text editor in Rust for Windows with a custom text buffer
-and custom editing behavior. a GUI framework may be used for windowing,
-drawing, layout, font rendering, and input, but do not use an existing
-text-editing widget or editor engine for the document area.
+and custom editing behavior. use GPUI for the desktop interface targetting
+windows x64, do not use an existing text-editing widget or editor engine
+for the document area.
 
 implement the document buffer yourself, such as a piece table, gap buffer,
 or rope. do not wrap a ready-made editor buffer library. avoid copying
