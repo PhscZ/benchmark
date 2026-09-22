@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Raster Editor — end-to-end harness</title>
+<style>
+  html, body { margin: 0; background: #15171b; color: #e7e9ee; font: 13px system-ui, sans-serif; }
+  #summary { padding: 10px 14px; border-bottom: 1px solid #31363e; }
+  #summary h1 { font-size: 14px; margin: 0 0 6px; }
+  #summary .counts { font-variant-numeric: tabular-nums; }
+  #summary .ok { color: #4ec9a0; }
+  #summary .fail { color: #ff6b6b; }
+  #summary ul { margin: 8px 0 0; padding-left: 18px; max-height: 30vh; overflow: auto; }
+  #summary li { margin: 2px 0; }
+  #summary .detail { color: #ffcc66; }
+  #app { width: 100%; height: 62vh; border: 0; border-top: 1px solid #31363e; display: block; }
+</style>
+</head>
+<body>
+<div id="summary">
+  <h1>Raster Editor end-to-end harness</h1>
+  <div class="counts" id="counts">running…</div>
+  <ul id="failures"></ul>
+</div>
+<iframe id="app" src="../../index.html" title="Raster Editor"></iframe>
+
+<script type="module">
+import { createHarness, createSuite } from './run.js';
+
+const iframe = document.getElementById('app');
+const counts = document.getElementById('counts');
+const failureList = document.getElementById('failures');
+
+async function main() {
+  // Poll for the editor instance: an iframe's initial about:blank document also
+  // reports readyState "complete", so a load-event/readyState check can race.
+  const deadline = Date.now() + 20000;
+  let appWindow = null;
+  while (Date.now() < deadline) {
+    const candidate = iframe.contentWindow;
+    if (candidate?.__rasterEditor) { appWindow = candidate; break; }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  if (!appWindow) throw new Error('the editor did not initialise in time');
+
+  const harness = createHarness(appWindow);
+  const filter = new URLSearchParams(location.search).get('only');
+  const tests = createSuite(harness).filter((test) => !filter || test.name.includes(filter));
+  const failures = [];
+  let passed = 0;
+
+  for (const [index, test] of tests.entries()) {
+    counts.textContent = `running ${index + 1}/${tests.length}: ${test.name}`;
+    try {
+      await test.fn();
+      passed += 1;
+    } catch (error) {
+      failures.push({ name: test.name, detail: error?.stack ?? String(error) });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  counts.innerHTML = `<span class="${failures.length ? 'fail' : 'ok'}">${passed}/${tests.length} passed</span>`
+    + (failures.length ? `, ${failures.length} failed` : '');
+  for (const failure of failures) {
+    const item = document.createElement('li');
+    item.innerHTML = `<strong>${failure.name}</strong><div class="detail"></div>`;
+    item.querySelector('.detail').textContent = failure.detail;
+    failureList.appendChild(item);
+  }
+
+  window.__e2eResult = {
+    total: tests.length,
+    passed,
+    failed: failures.length,
+    failures: failures.map((f) => ({ name: f.name, detail: f.detail })),
+  };
+  document.title = failures.length ? `E2E FAILED (${failures.length})` : `E2E PASSED (${passed}/${tests.length})`;
+}
+
+main().catch((error) => {
+  counts.innerHTML = `<span class="fail">harness error: ${error.message}</span>`;
+  window.__e2eResult = { total: 0, passed: 0, failed: 1, failures: [{ name: 'harness', detail: String(error?.stack ?? error) }] };
+});
+</script>
+</body>
+</html>

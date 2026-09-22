@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raster Editor</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-busy="false" data-has-image="false">
+<div class="app">
+
+  <header class="toolbar">
+    <span class="brand">Raster&nbsp;Editor</span>
+
+    <div class="group" role="group" aria-label="File">
+      <button id="openButton" type="button" class="btn primary" title="Open image (Ctrl+O)">Open…</button>
+      <input id="openInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+      <button id="reopenExportButton" type="button" class="btn" disabled title="Load the most recently exported file back into the editor">Reopen export</button>
+      <button id="exportButton" type="button" class="btn" disabled title="Export image (Ctrl+S)">Export…</button>
+    </div>
+
+    <div class="group" role="group" aria-label="History">
+      <button id="undoButton" type="button" class="btn" disabled title="Undo (Ctrl+Z)">Undo</button>
+      <button id="redoButton" type="button" class="btn" disabled title="Redo (Ctrl+Y)">Redo</button>
+    </div>
+
+    <div class="group" role="group" aria-label="View">
+      <button id="zoomOutButton" type="button" class="btn icon" disabled title="Zoom out (Ctrl+-)">−</button>
+      <span id="zoomLevel" class="readout" aria-live="polite">100%</span>
+      <button id="zoomInButton" type="button" class="btn icon" disabled title="Zoom in (Ctrl++)">+</button>
+      <button id="zoomFitButton" type="button" class="btn" disabled title="Fit to window (Ctrl+0)">Fit</button>
+      <button id="zoomActualButton" type="button" class="btn" disabled title="Actual size (Ctrl+1)">100%</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+
+    <aside class="panel panel-left" aria-label="Tools">
+      <h2 class="panel-title">Tools</h2>
+      <div class="tool-grid" id="toolButtons" role="toolbar" aria-label="Drawing tools">
+        <button type="button" class="tool" data-tool="brush" title="Brush (B)">Brush<span class="key">B</span></button>
+        <button type="button" class="tool" data-tool="eraser" title="Eraser (E)">Eraser<span class="key">E</span></button>
+        <button type="button" class="tool" data-tool="line" title="Line (L)">Line<span class="key">L</span></button>
+        <button type="button" class="tool" data-tool="rect" title="Rectangle (R)">Rect<span class="key">R</span></button>
+        <button type="button" class="tool" data-tool="ellipse" title="Ellipse (O)">Ellipse<span class="key">O</span></button>
+        <button type="button" class="tool" data-tool="picker" title="Eyedropper (I)">Picker<span class="key">I</span></button>
+        <button type="button" class="tool" data-tool="crop" title="Crop (C)">Crop<span class="key">C</span></button>
+        <button type="button" class="tool" data-tool="pan" title="Pan (H, or hold Space)">Pan<span class="key">H</span></button>
+      </div>
+
+      <section class="options" id="paintOptions" aria-label="Paint options">
+        <h3>Paint</h3>
+        <label class="field">
+          <span>Size <output id="brushSizeValue">12 px</output></span>
+          <input id="brushSize" type="range" min="1" max="200" step="1" value="12">
+        </label>
+        <label class="field">
+          <span>Color</span>
+          <input id="brushColor" type="color" value="#ff3b30">
+        </label>
+        <label class="field">
+          <span>Opacity <output id="opacityValue">100%</output></span>
+          <input id="opacity" type="range" min="5" max="100" step="1" value="100">
+        </label>
+      </section>
+
+      <section class="options" id="shapeOptions" aria-label="Shape options" hidden>
+        <h3>Shape</h3>
+        <label class="field">
+          <span>Style</span>
+          <select id="shapeMode">
+            <option value="outline">Outline</option>
+            <option value="fill">Fill</option>
+            <option value="both">Outline + fill</option>
+          </select>
+        </label>
+        <p class="hint">Hold <kbd>Shift</kbd> to constrain to a square, circle or 45° line.</p>
+      </section>
+
+      <section class="options" id="pickerOptions" aria-label="Eyedropper" hidden>
+        <h3>Eyedropper</h3>
+        <div class="swatch-row">
+          <span id="pickerSwatch" class="swatch"></span>
+          <span id="pickerValue" class="readout">—</span>
+        </div>
+        <p class="hint">Sampled colour becomes the active paint colour.</p>
+      </section>
+
+      <section class="options" id="cropOptions" aria-label="Crop" hidden>
+        <h3>Crop</h3>
+        <label class="field">
+          <span>Aspect ratio</span>
+          <select id="aspectPreset">
+            <option value="free">Freeform</option>
+            <option value="1:1">1:1</option>
+            <option value="4:3">4:3</option>
+            <option value="3:2">3:2</option>
+            <option value="16:9">16:9</option>
+            <option value="3:4">3:4</option>
+            <option value="2:3">2:3</option>
+            <option value="9:16">9:16</option>
+          </select>
+        </label>
+        <div class="grid-2">
+          <label class="field"><span>X</span><input id="cropX" type="number" step="1" min="0"></label>
+          <label class="field"><span>Y</span><input id="cropY" type="number" step="1" min="0"></label>
+          <label class="field"><span>Width</span><input id="cropW" type="number" step="1" min="1"></label>
+          <label class="field"><span>Height</span><input id="cropH" type="number" step="1" min="1"></label>
+        </div>
+        <p class="error" id="cropError" role="alert"></p>
+        <div class="row">
+          <button id="cropApply" type="button" class="btn primary">Apply crop</button>
+          <button id="cropCancel" type="button" class="btn">Cancel</button>
+        </div>
+        <div class="row">
+          <button id="cropSelectAll" type="button" class="btn">Select all</button>
+        </div>
+      </section>
+    </aside>
+
+    <div class="stage" id="stage">
+      <canvas id="viewportCanvas" tabindex="0" aria-label="Image canvas"></canvas>
+      <canvas id="overlayCanvas" aria-hidden="true"></canvas>
+      <div class="drop-overlay" id="dropOverlay" hidden><span>Drop a JPEG, PNG or WebP file to open it</span></div>
+      <div class="empty-state" id="emptyState">
+        <p>No image open.</p>
+        <p class="hint">Open a JPEG, PNG or WebP file, or drag one onto this window. Maximum 4096 × 4096 pixels. Everything stays on this machine.</p>
+      </div>
+    </div>
+
+    <aside class="panel panel-right" aria-label="Image operations">
+
+      <section class="options" aria-label="Geometry">
+        <h3>Resize</h3>
+        <div class="grid-2">
+          <label class="field"><span>Width</span><input id="resizeWidth" type="number" step="1" min="1" max="4096"></label>
+          <label class="field"><span>Height</span><input id="resizeHeight" type="number" step="1" min="1" max="4096"></label>
+        </div>
+        <label class="check"><input id="resizeLock" type="checkbox"> Lock aspect ratio</label>
+        <p class="error" id="resizeError" role="alert"></p>
+        <div class="row">
+          <button id="resizeApply" type="button" class="btn">Apply resize</button>
+        </div>
+      </section>
+
+      <section class="options" aria-label="Rotate and mirror">
+        <h3>Rotate &amp; mirror</h3>
+        <div class="row wrap">
+          <button id="rotateCcw" type="button" class="btn" title="Rotate 90° counter-clockwise">↺ 90° CCW</button>
+          <button id="rotateCw" type="button" class="btn" title="Rotate 90° clockwise">↻ 90° CW</button>
+          <button id="rotate180" type="button" class="btn" title="Rotate 180°">180°</button>
+          <button id="mirrorH" type="button" class="btn" title="Mirror horizontally (swap left and right)">Mirror ↔</button>
+          <button id="mirrorV" type="button" class="btn" title="Mirror vertically (swap top and bottom)">Mirror ↕</button>
+        </div>
+      </section>
+
+      <section class="options" aria-label="Adjustments">
+        <h3>Adjustments</h3>
+        <label class="field">
+          <span>Brightness <output id="brightnessValue">0</output></span>
+          <input id="brightness" type="range" min="-100" max="100" step="1" value="0">
+        </label>
+        <label class="field">
+          <span>Contrast <output id="contrastValue">0</output></span>
+          <input id="contrast" type="range" min="-100" max="100" step="1" value="0">
+        </label>
+        <label class="check"><input id="grayscaleToggle" type="checkbox"> Grayscale</label>
+        <label class="check"><input id="invertToggle" type="checkbox"> Invert colors</label>
+        <div class="row">
+          <button id="adjustApply" type="button" class="btn primary">Apply</button>
+          <button id="adjustCancel" type="button" class="btn" disabled>Cancel</button>
+          <button id="adjustReset" type="button" class="btn">Reset</button>
+        </div>
+        <p class="hint">Preview only — the document changes when you press Apply. Formulas are documented in README.md.</p>
+      </section>
+
+      <section class="options" aria-label="Export">
+        <h3>Export</h3>
+        <label class="field">
+          <span>Format</span>
+          <select id="exportFormat">
+            <option value="png">PNG (keeps transparency)</option>
+            <option value="jpeg">JPEG (flattens transparency)</option>
+          </select>
+        </label>
+        <label class="field" id="jpegQualityRow" hidden>
+          <span>JPEG quality <output id="jpegQualityValue">92%</output></span>
+          <input id="jpegQuality" type="range" min="5" max="100" step="1" value="92">
+        </label>
+        <label class="field" id="exportBackgroundRow" hidden>
+          <span>Flatten onto</span>
+          <input id="exportBackground" type="color" value="#ffffff">
+        </label>
+        <label class="field">
+          <span>File name</span>
+          <input id="exportFilename" type="text" value="edited-image" spellcheck="false">
+        </label>
+        <p class="error" id="exportError" role="alert"></p>
+        <div class="row">
+          <button id="exportRunButton" type="button" class="btn primary">Export image</button>
+        </div>
+      </section>
+
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <span id="notice" class="notice" role="alert" hidden></span>
+    <span id="statusText" class="status" role="status">Ready. Open an image to start.</span>
+    <span class="spacer"></span>
+    <span class="readout">Image <span id="statusDimensions">—</span></span>
+    <span class="readout">Zoom <span id="statusZoom">—</span></span>
+    <span class="readout" id="statusHistory" title="Undo depth / redo depth">History —</span>
+    <span class="readout" id="statusMemory" title="Undo history memory usage">Memory —</span>
+  </footer>
+
+  <div class="busy-bar" id="busyBar" hidden><div class="busy-fill"></div></div>
+</div>
+
+<div class="modal-root" id="modalRoot" hidden>
+  <div class="modal-backdrop"></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle">Confirm</h2>
+    <p id="modalBody"></p>
+    <div class="row end">
+      <button id="modalCancel" type="button" class="btn">Cancel</button>
+      <button id="modalConfirm" type="button" class="btn primary">Discard and continue</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

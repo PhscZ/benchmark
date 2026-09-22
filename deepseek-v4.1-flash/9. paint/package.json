@@ -1,0 +1,21 @@
+{
+  "name": "raster-editor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-only browser raster image editor (canvas 2D, no runtime dependencies)",
+  "scripts": {
+    "start": "node tools/serve.mjs . 8080",
+    "test": "node --test \"test/unit/*.test.js\"",
+    "test:e2e": "node test/e2e/runner.mjs",
+    "test:smoke": "node test/e2e/file-dialog.mjs",
+    "test:all": "npm test && npm run test:e2e && npm run test:smoke",
+    "fixtures": "python test/fixtures/generate.py"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
