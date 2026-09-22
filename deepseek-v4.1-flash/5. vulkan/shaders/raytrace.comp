@@ -1,0 +1,69 @@
+#version 450
+// =============================================================================
+// Production path-tracing compute shader.
+//
+// One invocation per pixel; each dispatch accumulates `sample_count` samples
+// (sample indices [sample_base, sample_base + sample_count)) into the
+// floating-point accumulation image.  Because every invocation owns exactly one
+// pixel there are no write races and no atomics are required.
+// =============================================================================
+
+#include "lib/common.glsl"
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+
+layout(push_constant) uniform PushConstants {
+    uint sample_base;     // index of the first sample handled by this dispatch
+    uint sample_count;    // number of samples accumulated by this dispatch
+    uint total_samples;   // selected samples-per-pixel preset (1, 16 or 64)
+    uint stratified;      // 0 => center of pixel (1 spp preset), 1 => stratified jitter
+} pc;
+
+// Deterministic subpixel offset.  For the 1 spp preset the exact pixel center
+// (0.5, 0.5) is used; otherwise the sample index selects a stratum of a
+// ceil(sqrt(total_samples)) x ceil(sqrt(total_samples)) grid and is jittered by
+// a hash of (pixel x, pixel y, sample index, seed).
+vec2 sample_offset(ivec2 pixel, uint sample_index) {
+    if (pc.stratified == 0u) {
+        return vec2(0.5, 0.5);
+    }
+    uint grid = 1u;
+    while (grid * grid < pc.total_samples) {
+        grid += 1u;
+    }
+    uint cell_x = min(sample_index % grid, grid - 1u);
+    uint cell_y = min(sample_index / grid, grid - 1u);
+
+    uint key = hash_u32(uint(pixel.x) * 0x9e3779b9u)
+             ^ hash_u32(uint(pixel.y) * 0x85ebca6bu)
+             ^ hash_u32(scene.counts.z ^ 0xc2b2ae35u)
+             ^ hash_u32((sample_index + 1u) * 0x27d4eb2fu);
+    float jitter_x = hash_unit_float(key);
+    float jitter_y = hash_unit_float(key ^ 0x68e31da4u);
+
+    return (vec2(float(cell_x), float(cell_y)) + vec2(jitter_x, jitter_y)) / float(grid);
+}
+
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(accum_image);
+    if (pixel.x >= size.x || pixel.y >= size.y) {
+        return;     // invocations past the right/bottom edge do nothing
+    }
+
+    vec2 size_f = vec2(float(size.x), float(size.y));
+    vec3 sum = vec3(0.0);
+    for (uint i = 0u; i < pc.sample_count; ++i) {
+        uint sample_index = pc.sample_base + i;
+        vec2 offset = sample_offset(pixel, sample_index);
+        // Image row 0 is the top of the frame, so the vertical camera coordinate
+        // is flipped (cam_vertical points up).
+        vec2 uv = vec2((float(pixel.x) + offset.x) / size_f.x,
+                       1.0 - (float(pixel.y) + offset.y) / size_f.y);
+        vec3 dir = camera_ray_dir(uv);
+        sum += trace_path(scene.cam_origin.xyz, dir);
+    }
+
+    vec4 previous = imageLoad(accum_image, pixel);
+    imageStore(accum_image, pixel, vec4(previous.rgb + sum, 0.0));
+}

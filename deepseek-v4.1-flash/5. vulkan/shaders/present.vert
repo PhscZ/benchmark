@@ -1,0 +1,11 @@
+#version 450
+// Fullscreen triangle generated from the vertex index; rasterization is used
+// only to display the ray-traced image (never to produce it).
+
+layout(location = 0) out vec2 v_uv;
+
+void main() {
+    vec2 corner = vec2(float((gl_VertexIndex << 1) & 2), float(gl_VertexIndex & 2));
+    gl_Position = vec4(corner * 2.0 - 1.0, 0.0, 1.0);
+    v_uv = corner;      // (0,0) is the top-left texel of the accumulation image
+}

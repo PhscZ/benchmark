@@ -1,0 +1,105 @@
+#version 450
+// =============================================================================
+// GPU intersection self-test.
+//
+// Takes a table of known rays (origin, direction, [t_min, t_max]) from a
+// storage buffer and writes back, for each ray:
+//   * the nearest hit from trace_scene()  (t, kind, index, position, normal)
+//   * the any_hit() shadow query result over the same interval
+//   * optionally the shaded colour (shade_direct) or the full traced radiance
+// The host compares the read-back values against an independent CPU reference
+// implementation of the same intersection/shading math.
+// =============================================================================
+
+#include "lib/common.glsl"
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+struct TestRay {
+    vec4 origin;        // xyz = origin
+    vec4 dir;           // xyz = direction (unit length)
+    vec4 t_min_max;     // x = t_min, y = t_max, z = mode
+};
+
+struct TestResult {
+    vec4 t_hit;         // x = t, y = 1 if hit else 0, z = mode
+    vec4 position;      // xyz = hit position
+    vec4 normal;        // xyz = oriented unit normal
+    vec4 color;         // shaded / traced colour for modes 1 and 2
+    uvec4 prim_info;    // x = kind, y = index, z = any_hit, w = unused
+};
+
+layout(set = 0, binding = 4, std430) readonly buffer TestRayBuffer { TestRay test_rays[]; };
+layout(set = 0, binding = 5, std430) buffer TestResultBuffer { TestResult test_results[]; };
+
+layout(push_constant) uniform PushConstants {
+    uint ray_count;
+} pc;
+
+const uint MODE_INTERSECT = 0u;
+const uint MODE_PATH = 1u;
+const uint MODE_SHADE = 2u;
+// Synthetic-surface modes that exercise the zero-length half-vector guard:
+// the surface normal equals the ray direction, so L = -V and H = L + V = 0.
+const uint MODE_HALF_VECTOR = 3u;
+const uint MODE_HALF_VECTOR_CONTROL = 4u;
+
+void main() {
+    uint id = gl_GlobalInvocationID.x;
+    if (id >= pc.ray_count) {
+        return;
+    }
+    TestRay ray = test_rays[id];
+    vec3 ro = ray.origin.xyz;
+    vec3 rd = ray.dir.xyz;
+    float t_min = ray.t_min_max.x;
+    float t_max = ray.t_min_max.y;
+    uint mode = uint(ray.t_min_max.z);
+
+    Surface surf;
+    bool hit = trace_scene(ro, rd, t_min, t_max, surf);
+
+    TestResult result;
+    result.t_hit = vec4(hit ? surf.t : -1.0, hit ? 1.0 : 0.0, float(mode), 0.0);
+    result.position = vec4(hit ? surf.position : vec3(0.0), 0.0);
+    result.normal = vec4(hit ? surf.normal : vec3(0.0), 0.0);
+    result.color = vec4(0.0);
+    if (mode == MODE_SHADE && hit) {
+        result.color = vec4(shade_direct(surf, rd), 1.0);
+    } else if (mode == MODE_PATH) {
+        result.color = vec4(trace_path(ro, rd), 1.0);
+    } else if (mode == MODE_HALF_VECTOR || mode == MODE_HALF_VECTOR_CONTROL) {
+        // kd = 0, so only the ambient and specular terms can contribute.
+        vec3 l = normalize(scene.light_position.xyz - ro);
+        Surface synth;
+        synth.t = 0.0;
+        synth.prim_kind = PRIM_SPHERE;
+        synth.prim_index = 0u;
+        synth.position = ro;
+        synth.base_color = vec3(1.0);
+        synth.kd = 0.0;
+        synth.ks = 1.0;
+        synth.shininess = 8.0;
+        synth.reflectivity = 0.0;
+        if (mode == MODE_HALF_VECTOR) {
+            // The incoming ray direction equals L, so V = -L and the half
+            // vector L + V is exactly zero: specular must fall back to zero and
+            // only ambient may remain.
+            synth.normal = l;
+            result.color = vec4(shade_direct(synth, l), 1.0);
+        } else {
+            // The view direction is rotated slightly off L, so H is short but
+            // non-zero; aligning the normal with H makes specular exactly ks.
+            vec3 tangent = normalize(cross(l, vec3(0.0, 0.0, 1.0)));
+            vec3 v = normalize(l + 0.1 * tangent);
+            vec3 h = normalize(l + v);
+            synth.normal = h;
+            result.color = vec4(shade_direct(synth, -v), 1.0);
+        }
+    }
+    result.prim_info = uvec4(hit ? surf.prim_kind : 0xffffffffu,
+                             hit ? surf.prim_index : 0xffffffffu,
+                             any_hit(ro, rd, t_min, t_max) ? 1u : 0u,
+                             0u);
+    test_results[id] = result;
+}

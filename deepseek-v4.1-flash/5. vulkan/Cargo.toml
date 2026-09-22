@@ -1,0 +1,37 @@
+[package]
+name = "vk-raytracer"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.87"
+description = "Desktop GPU ray tracer (Vulkan compute, no hardware ray tracing extensions)"
+build = "build.rs"
+
+[lib]
+name = "vk_raytracer"
+path = "src/lib.rs"
+
+[[bin]]
+name = "vk-raytracer"
+path = "src/main.rs"
+
+[dependencies]
+ash = "0.38"
+ash-window = "0.13"
+raw-window-handle = "0.6"
+winit = "0.30"
+glam = { version = "0.30", features = ["bytemuck"] }
+bytemuck = { version = "1", features = ["derive"] }
+png = "0.17"
+font8x8 = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+
+[build-dependencies]
+# naga compiles the GLSL compute/vertex/fragment shaders to SPIR-V at build time.
+# `wgsl-in` is required because naga 30 gates `Binding::apply_default_interpolation`
+# (used by the GLSL front end) behind the `wgsl-in`/`spv-in` features.
+naga = { version = "30", features = ["glsl-in", "spv-out", "wgsl-in"] }
+
+[profile.release]
+opt-level = 3
