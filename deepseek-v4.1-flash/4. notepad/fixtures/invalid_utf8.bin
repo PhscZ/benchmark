@@ -1,0 +1,11 @@
+ASCII header line
+lone continuation bytes: €‚
+truncated 2-byte sequence: Ã
+truncated 3-byte sequence: â‚
+truncated 4-byte sequence: ğŸ˜
+overlong 2-byte encoding: À¯
+overlong 3-byte encoding: à€¯
+overlong 4-byte encoding: ğ€€¯
+stray byte: ÿ
+stray bytes: şÿ
+tail line

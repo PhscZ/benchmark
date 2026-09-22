@@ -1,0 +1,32 @@
+[package]
+name = "notepad"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+description = "Desktop text editor with a custom piece-table buffer and custom editing behavior"
+license = "MIT"
+
+[dependencies]
+eframe = { version = "=0.36.2", default-features = false, features = [
+    "default_fonts",
+    "glow",
+    "wayland",
+    "x11",
+] }
+egui = "=0.36.2"
+rfd = "=0.17.2"
+memchr = "=2.8.3"
+# Already in the tree via egui-winit; used directly so the Edit menu's Paste item
+# works without a key event to carry the clipboard contents.
+arboard = "=3.6.1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

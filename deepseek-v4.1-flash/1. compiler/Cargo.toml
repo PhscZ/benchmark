@@ -1,0 +1,11 @@
+[package]
+name = "ccomp"
+version = "1.0.0"
+edition = "2021"
+
+[[bin]]
+name = "ccomp"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3

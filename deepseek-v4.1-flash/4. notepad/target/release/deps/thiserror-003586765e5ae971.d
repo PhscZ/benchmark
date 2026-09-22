@@ -1,0 +1,12 @@
+C:\benchmark\deepseek-v4.1-flash\4. notepad\target\release\deps\thiserror-003586765e5ae971.d: C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\lib.rs C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\aserror.rs C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\display.rs C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\var.rs C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\private.rs C:\benchmark\deepseek-v4.1-flash\4.\ notepad\target\release\build\thiserror-ec1b9938581b048b\out/private.rs
+
+C:\benchmark\deepseek-v4.1-flash\4. notepad\target\release\deps\libthiserror-003586765e5ae971.rmeta: C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\lib.rs C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\aserror.rs C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\display.rs C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\var.rs C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\private.rs C:\benchmark\deepseek-v4.1-flash\4.\ notepad\target\release\build\thiserror-ec1b9938581b048b\out/private.rs
+
+C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\lib.rs:
+C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\aserror.rs:
+C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\display.rs:
+C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\var.rs:
+C:\Users\pz020\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.20\src\private.rs:
+C:\benchmark\deepseek-v4.1-flash\4.\ notepad\target\release\build\thiserror-ec1b9938581b048b\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\benchmark\\deepseek-v4.1-flash\\4. notepad\\target\\release\\build\\thiserror-ec1b9938581b048b\\out

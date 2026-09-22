@@ -1,0 +1,6 @@
+First line is plain ASCII.
+TODO: verify CRLF handling in the editor.
+Another ASCII line with some content here.
+Non-ASCII line: café — naïve — 日本語 — Привет
+TODO: second marker for the CRLF fixture.
+Last line, still CRLF terminated.

@@ -1,0 +1,23 @@
+# Rust
+target/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# JavaScript
+node_modules/
+dist/
+
+# C / compiled binaries
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.a
+*.exe
+*.out
+build/

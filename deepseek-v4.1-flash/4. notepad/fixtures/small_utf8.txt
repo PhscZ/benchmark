@@ -1,0 +1,8 @@
+Small UTF-8 fixture for the notepad benchmark
+TODO: accents -> café, naïve, résumé, Ångström, Größe
+TODO: CJK -> 你好世界 日本語 한국어 中文测试
+TODO: emoji -> 😀 🚀 🌟 🎉 (4-byte UTF-8)
+tab	separated	columns	here
+trailing spaces follow:   
+Mixed: ASCII + Ελληνικά + Русский + 中文 + émoji 🎉	with a tab
+combining: é vs é  |  zwj family: 👨‍👩‍👧‍👦
