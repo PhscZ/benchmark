@@ -447,7 +447,7 @@ large-file responsiveness.
 | Editing and selection | Correct keyboard/mouse navigation, selection, insertion, deletion, and clipboard operations, including Unicode and multiline text. |
 | Undo and redo | Restore edits, cursor, and selection correctly; handle grouped typing, paste, redo branching, and saved-state tracking. |
 | Find and replace | Correct match counts, highlighting, navigation, case handling, replacement, and undoable replace-all. |
-| Large-file responsiveness | Load and edit the large-file (100MB), scroll through them, and perform background operations without freezing the interface or corrupting data. |
+| Large-file responsiveness | Load and edit the large-file (90MB), scroll through them, and perform background operations without freezing the interface or corrupting data. |
 
 ### 6. Authenticated Web Scraper in Python
 

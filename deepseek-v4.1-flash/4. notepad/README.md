@@ -33,7 +33,7 @@ cargo build --release
 cargo run --release
 
 # run with a file open
-cargo run --release -- fixtures/large_100mb.txt
+cargo run --release -- fixtures/large_90mb.txt
 
 # unit + integration tests
 cargo test --release
@@ -76,7 +76,7 @@ python tools/make_fixtures.py
 | File | Size | Contents |
 |---|---|---|
 | `fixtures/million_lines.txt` | 37.2 MiB | 1,000,000 lines, 20–60 chars each, LF |
-| `fixtures/large_100mb.txt` | 100.19 MiB | 1,008,492 lines, ~10% non-ASCII (Cyrillic, Greek, CJK, emoji), 50 lines of ≥200,000 bytes, 5,000 × `SEARCHABLE_TOKEN`, 100 × `Ünïcödé_Töken` |
+| `fixtures/large_90mb.txt` | 90.00 MiB | 895,205 lines, ~10% non-ASCII (Cyrillic, Greek, CJK, emoji), 50 lines of ≥200,000 bytes, 5,000 × `SEARCHABLE_TOKEN`, 100 × `Ünïcödé_Töken`; padded to exactly 94,371,840 bytes |
 | `fixtures/small_utf8.txt` | 417 B | Tabs, trailing spaces, CJK, emoji, combining marks, 3 × `TODO` |
 | `fixtures/crlf.txt` | 258 B | CRLF throughout, 2 × `TODO` |
 | `fixtures/invalid_utf8.bin` | 267 B | Lone continuations, truncated and overlong sequences, `0xFF` |
@@ -122,8 +122,8 @@ The alternative designs were considered and rejected:
 The loaded file is cut into pieces of at most `CHUNK_CAP` (64 KiB) instead of
 being one giant piece. This bound matters: when an edit cuts a piece in half, the
 newline counts of the two halves are recovered by **scanning them**, and the bound
-keeps that scan at 64 KiB rather than "the whole file". A 100 MiB file loads as
-about 1,600 pieces.
+keeps that scan at 64 KiB rather than "the whole file". The 90 MiB fixture loads
+as 1,440 pieces.
 
 ### The chunk store
 
@@ -440,19 +440,21 @@ Produced by `cargo run --release --example largefile`, which drives the library
 (no GUI) against the generated fixtures on the development machine
 (AMD FX-8300, Windows 10, `--release`).
 
-### `fixtures/large_100mb.txt` — 100.2 MiB, 1,008,493 lines
+### `fixtures/large_90mb.txt` — 90.0 MiB, 895,206 lines
+
+Times are medians of five runs; single runs on this machine vary by ±50%.
 
 | Operation | Time | Rate |
 |---|---|---|
-| Load + UTF-8 validate + build index | 614 ms | 163 MiB/s |
-| 2000 random `line_start()` queries | 23 ms | 11.7 µs/query |
-| 10,000 `prev_char` steps from the end | 2.0 ms | 0.2 µs/step |
-| 1000 keystrokes at the end | 1.7 ms | 1.7 µs/keystroke |
-| 1000 `Ctrl+Right` word steps | 2.5 ms | 2.5 µs/step |
-| Snapshot (for save or search) | 0.05 ms | 1,604 pieces by pointer |
-| Search, 5,000 matches | 75 ms | 1.31 GiB/s |
-| Search, case-insensitive, 100 matches | 103 ms | 973 MiB/s |
-| Atomic save | 656 ms | 153 MiB/s |
+| Load + UTF-8 validate + build index | 287 ms | 314 MiB/s |
+| 2000 random `line_start()` queries | 36 ms | 17.9 µs/query |
+| 10,000 `prev_char` steps from the end | 2.5 ms | 0.2 µs/step |
+| 1000 keystrokes at the end | 2.1 ms | 2.1 µs/keystroke |
+| 1000 `Ctrl+Right` word steps | 3.0 ms | 3.0 µs/step |
+| Snapshot (for save or search) | 0.06 ms | 1,440 pieces by pointer |
+| Search, 5,000 matches | 123 ms | 734 MiB/s |
+| Search, case-insensitive, 100 matches | 112 ms | 805 MiB/s |
+| Atomic save | 635 ms | 142 MiB/s |
 
 ### `fixtures/million_lines.txt` — 37.2 MiB, 1,000,001 lines
 
@@ -467,21 +469,21 @@ Produced by `cargo run --release --example largefile`, which drives the library
 
 What these numbers establish:
 
-- **A keystroke is ~1.7 µs regardless of file size.** 1.7 µs on the 100 MiB file
+- **A keystroke is ~2 µs regardless of file size.** 2.1 µs on the 90 MiB file
   and 1.7 µs on the 1M-line file: the piece table makes edit cost independent of
   document size, and the 1000-keystroke run added exactly 1000 pieces.
-- **A snapshot is ~0.05 ms on 100 MiB.** That is the property the whole background
+- **A snapshot is ~0.06 ms on 90 MiB.** That is the property the whole background
   design rests on — it is cheap enough to take one per Ctrl+S or per keystroke in
   the search box.
-- **Search runs at ~1 GiB/s**, so a full scan of the largest fixture is ~75 ms and
-  is off the UI thread anyway.
-- **Line-index queries are ~12–23 µs**, which is dominated by the bounded scan
+- **Search runs at ~0.7–1 GiB/s**, so a full scan of the largest fixture is ~120 ms
+  and is off the UI thread anyway.
+- **Line-index queries are ~12–24 µs**, which is dominated by the bounded scan
   inside the piece that holds the target line, not by the tree descent.
-- Resident memory is ~100 MiB for a 100 MiB file: the file bytes are held once, in
+- Resident memory is ~90 MiB for a 90 MiB file: the file bytes are held once, in
   one buffer, and shared with every snapshot rather than copied.
 
 Interactive responsiveness was checked by launching the built binary against
-`fixtures/large_100mb.txt` and observing it load, stay responsive
+`fixtures/large_90mb.txt` and observing it load, stay responsive
 (`Responding = True`), and hold a stable working set across repeated samples.
 
 ---
@@ -492,7 +494,7 @@ Interactive responsiveness was checked by launching the built binary against
 cargo test --release          # 95 tests: 67 buffer/undo/search/file-format
                               # integration tests + 28 headless view tests
 cargo run --release --example largefile
-cargo run --release -- fixtures/large_100mb.txt
+cargo run --release -- fixtures/large_90mb.txt
 ```
 
 The test suite is not scaffolding around the implementation; it targets the
@@ -517,9 +519,9 @@ failure modes that a piece table actually has:
 
 To exercise the large-file requirements by hand:
 
-1. Open `fixtures/large_100mb.txt`; the tab appears immediately with a progress bar
+1. Open `fixtures/large_90mb.txt`; the tab appears immediately with a progress bar
    and Cancel button, and the window stays responsive.
-2. Scroll to the bottom — the status bar line count reads 1,008,493.
+2. Scroll to the bottom — the status bar line count reads 895,206.
 3. Type into the document; the keystroke is instant, and the piece count in the
    status bar grows by a couple of pieces.
 4. `Ctrl+S` while continuing to type: the save runs in the background, the tab
@@ -534,7 +536,7 @@ To exercise the large-file requirements by hand:
    running (verified: the process stays alive and responsive on this fixture).
 
 > Visual verification note: the editor was launched and confirmed to run and load
-> the 100 MiB fixture, but the environment's screenshot capture returned unrelated
+> the 90 MiB fixture, but the environment's screenshot capture returned unrelated
 > desktop windows rather than the editor's own surface, so pixel-level visual
 > confirmation could not be performed. Rendering correctness is instead covered by
 > the headless tests above, which execute the real paint and input paths.

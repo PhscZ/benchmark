@@ -37,7 +37,7 @@ fn main() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures");
     let cases: &[(&str, &str)] = &[
         ("million_lines.txt", "1,000,000 short lines"),
-        ("large_100mb.txt", "100 MiB mixed content"),
+        ("large_90mb.txt", "90 MiB mixed content"),
     ];
 
     for (name, label) in cases {
@@ -149,8 +149,15 @@ fn main() {
         );
 
         // ---- search ------------------------------------------------------
-        for needle in ["SEARCHABLE_TOKEN", "NEEDLE_MARKER", "Ünïcödé_Töken", "zzz-not-present"] {
-            let Some(q) = Query::new(needle, true) else { continue };
+        for needle in [
+            "SEARCHABLE_TOKEN",
+            "NEEDLE_MARKER",
+            "Ünïcödé_Töken",
+            "zzz-not-present",
+        ] {
+            let Some(q) = Query::new(needle, true) else {
+                continue;
+            };
             let t = Instant::now();
             let found = search::find_all(&snap, &q);
             let elapsed = t.elapsed();

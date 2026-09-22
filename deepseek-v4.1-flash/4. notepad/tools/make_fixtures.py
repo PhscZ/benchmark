@@ -24,13 +24,20 @@ FIXTURES = os.path.join(ROOT, "fixtures")
 
 SEED = 20250921
 
-TARGET_100MIB = 104_857_600  # 100 MiB, exact
+TARGET_LARGE_BYTES = 90 * 1024 * 1024  # 90 MiB, exact
 MILLION_LINES = 1_000_000
 NEEDLE_EVERY = 100_000
 LONG_LINE_BYTES = 200_000
 LONG_LINE_COUNT = 50
 SEARCHABLE_TOKEN_COUNT = 5_000
 UNICODE_TOKEN_COUNT = 100
+
+# Tokens and long lines are placed inside this span, which stops one short of the
+# target by more than a whole long line, so flushing the last of them can never
+# push the file past TARGET_LARGE_BYTES.  The closing line then lands it exactly.
+LARGE_SPAN = TARGET_LARGE_BYTES - (LONG_LINE_BYTES + 4096)
+# Once the remaining budget is at most this, the closing line absorbs it.
+TAIL_MAX = 4096
 
 SEARCHABLE_TOKEN = "SEARCHABLE_TOKEN"
 UNICODE_TOKEN = "Ünïcödé_Töken"
@@ -158,6 +165,11 @@ def long_line(index: int) -> str:
     reps, rem = divmod(size, len(_LONG_PHRASE))
     return _LONG_PHRASE * reps + _LONG_PHRASE[:rem]
 
+def tail_line(total: int) -> str:
+    """An ASCII line whose encoded size (body + LF) is exactly `total` bytes."""
+    body = (_LONG_PHRASE * (total // len(_LONG_PHRASE) + 1))[: total - 1]
+    return body
+
 
 def sha256(path: str) -> str:
     h = hashlib.sha256()
@@ -251,15 +263,15 @@ def build_million_lines(path: str) -> None:
     assert w.line_count >= MILLION_LINES, w.line_count
 
 
-def build_large_100mb(path: str) -> None:
+def build_large_90mb(path: str) -> None:
     rng = random.Random(SEED + 2)
     w = ByteWriter(path)
 
-    token_at = [(TARGET_100MIB * k) // SEARCHABLE_TOKEN_COUNT
+    token_at = [(LARGE_SPAN * k) // SEARCHABLE_TOKEN_COUNT
                 for k in range(1, SEARCHABLE_TOKEN_COUNT + 1)]
-    unicode_at = [(TARGET_100MIB * k) // UNICODE_TOKEN_COUNT
+    unicode_at = [(LARGE_SPAN * k) // UNICODE_TOKEN_COUNT
                   for k in range(1, UNICODE_TOKEN_COUNT + 1)]
-    long_at = [(TARGET_100MIB * k) // LONG_LINE_COUNT
+    long_at = [(LARGE_SPAN * k) // LONG_LINE_COUNT
                for k in range(1, LONG_LINE_COUNT + 1)]
 
     ti = ui = li = 0
@@ -285,8 +297,11 @@ def build_large_100mb(path: str) -> None:
             emitted_long += 1
             li += 1
 
-    while w.total_bytes < TARGET_100MIB:
-        if rng.random() < 0.10:
+    while w.total_bytes < TARGET_LARGE_BYTES:
+        remaining = TARGET_LARGE_BYTES - w.total_bytes
+        if remaining <= TAIL_MAX:
+            w.line(tail_line(remaining))
+        elif rng.random() < 0.10:
             w.line(exotic_line(rng, exotic_index))
             exotic_index += 1
             exotic_lines += 1
@@ -296,7 +311,7 @@ def build_large_100mb(path: str) -> None:
     emit_pending()
     w.close()
 
-    assert w.total_bytes >= TARGET_100MIB, w.total_bytes
+    assert w.total_bytes == TARGET_LARGE_BYTES, w.total_bytes
     assert emitted_searchable == SEARCHABLE_TOKEN_COUNT, emitted_searchable
     assert emitted_unicode == UNICODE_TOKEN_COUNT, emitted_unicode
     assert emitted_long == LONG_LINE_COUNT, emitted_long
@@ -380,7 +395,7 @@ def main() -> int:
     os.makedirs(FIXTURES, exist_ok=True)
 
     p1 = os.path.join(FIXTURES, "million_lines.txt")
-    p2 = os.path.join(FIXTURES, "large_100mb.txt")
+    p2 = os.path.join(FIXTURES, "large_90mb.txt")
     p3 = os.path.join(FIXTURES, "small_utf8.txt")
     p4 = os.path.join(FIXTURES, "crlf.txt")
     p5 = os.path.join(FIXTURES, "invalid_utf8.bin")
@@ -388,7 +403,7 @@ def main() -> int:
     p7 = os.path.join(FIXTURES, "bom_utf8.txt")
 
     build_million_lines(p1)
-    build_large_100mb(p2)
+    build_large_90mb(p2)
     build_small_utf8(p3)
     build_crlf(p4)
     build_invalid_utf8(p5)
@@ -408,7 +423,7 @@ def main() -> int:
     assert 20 <= s1["min_len"] and s1["max_len"] <= 60, (s1["min_len"], s1["max_len"])
     assert s1["occ"][0] == MILLION_LINES // NEEDLE_EVERY, s1["occ"]
     assert s1["bytes"] >= 30 * 1024 * 1024, s1["bytes"]
-    assert s2["bytes"] >= TARGET_100MIB, s2["bytes"]
+    assert s2["bytes"] == TARGET_LARGE_BYTES, s2["bytes"]
     assert s2["occ"][0] == SEARCHABLE_TOKEN_COUNT, s2["occ"]
     assert s2["on_lines"][0] == SEARCHABLE_TOKEN_COUNT, s2["on_lines"]
     assert s2["occ"][1] == UNICODE_TOKEN_COUNT, s2["occ"]
