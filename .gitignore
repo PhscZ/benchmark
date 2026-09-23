@@ -21,3 +21,7 @@ dist/
 *.exe
 *.out
 build/
+
+# Benchmark outputs
+**/renders/*
+!**/renders/.keep

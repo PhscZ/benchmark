@@ -17,11 +17,14 @@ Models are evaluated on whether their software runs and correctly completes the 
   - [3. Cross-Platform Flappy Bird–Style Game in Rust](#3-cross-platform-flappy-birdstyle-game-in-rust)
   - [4. Desktop Text Editor in Rust](#4-desktop-text-editor-in-rust)
   - [5. GPU Ray Tracer using Vulkan in Rust](#5-gpu-ray-tracer-using-vulkan-in-rust)
-  - [6. Authenticated Web Scraper in Python](#5-authenticated-web-scraper-in-python)
-  - [7. Near-Duplicate Image Finder in Python](#6-near-duplicate-image-finder-in-python)
-  - [8. 3D Racing Game in JavaScript](#7-3d-racing-game-in-javascript)
-  - [9. Browser Image Editor in JavaScript](#8-browser-image-editor-in-javascript)
-  - [10. Memory Allocator in C](#9-memory-allocator-in-c)
+  - [6. GPU Inference Engine in Rust](#6-gpu-inference-engine-in-rust)
+  - [7. Near-Duplicate Image Finder in Python](#7-near-duplicate-image-finder-in-python)
+  - [8. 3D Racing Game in JavaScript](#8-3d-racing-game-in-javascript)
+  - [9. Browser Image Editor in JavaScript](#9-browser-image-editor-in-javascript)
+  - [10. Memory Allocator in C](#10-memory-allocator-in-c)
+  - [11. ZIP Archive Tool in Zig](#11-zip-archive-tool-in-zig)
+  - [12. Regex Engine in C++](#12-regex-engine-in-c)
+  - [13. Concurrent KV Store in Go](#13-concurrent-kv-store-in-go)
 
 ## Scoring
 
@@ -447,7 +450,7 @@ large-file responsiveness.
 | Editing and selection | Correct keyboard/mouse navigation, selection, insertion, deletion, and clipboard operations, including Unicode and multiline text. |
 | Undo and redo | Restore edits, cursor, and selection correctly; handle grouped typing, paste, redo branching, and saved-state tracking. |
 | Find and replace | Correct match counts, highlighting, navigation, case handling, replacement, and undoable replace-all. |
-| Large-file responsiveness | Load and edit the large-file (90MB), scroll through them, and perform background operations without freezing the interface or corrupting data. |
+| Large-file responsiveness | Load and edit the large-file (90 MiB), scroll through them, and perform background operations without freezing the interface or corrupting data. |
 
 ### 5. GPU Ray Tracer using Vulkan in Rust
 
@@ -641,94 +644,239 @@ and reproducible output.
 | Vulkan reliability and benchmarking | Complete the fixed benchmark with valid GPU and wall-clock timings; pass repeated resize/restart tests without validation errors, GPU timeouts, or sustained GPU-memory growth. |
 
 
-### 6. Authenticated Web Scraper in Python
+### 6. GPU Inference Engine in Rust
 
 ```text
-write a Python program that logs into https://plazmaburst2.com/ and
-scrape the map information from this page using the authenticated session:
-https://plazmaburst2.com/?s=9&id=5
+write a custom LLM inference engine in Rust that loads GGUF files
+directly and runs Qwen3-4B-Instruct-2507 on the GPU through Vulkan
+compute shaders, in six quantizations: Q8_0, Q6_K, Q5_K_M, Q4_K_M,
+Q3_K_M, and Q2_K.
 
-credentials for the benchmark:
-login = "login"
-password = "password"
+do not use an existing inference engine, model runtime, or tensor
+framework. llama.cpp, ggml, gguf crates, candle, burn, tch, torch,
+onnxruntime, tract, mistral.rs, ollama, and vllm are not allowed, as
+a dependency or as a subprocess.
 
-do not hardcode these credentials, save them in a .env file
+raw Vulkan bindings such as ash or vulkano are allowed, as are
+windowing, memory-mapping, math, shader compilation, CLI, and
+serialization crates. wgpu and other cross-API abstraction layers are
+not allowed; the implementation must target Vulkan directly and manage
+its own descriptors, memory, and synchronization. GLSL or slang compute
+shaders compiled to SPIR-V are allowed and must be compiled as part of
+the build; host code must be written in Rust.
 
-authentication:
-- inspect and use the website's actual login flow
-- handle required form fields, cookies, redirects, and CSRF tokens
-- verify that login succeeded before attempting authenticated scraping;
-  an HTTP 200 response alone is not proof of a successful login
-- reuse the authenticated session for subsequent requests
-- do attempt to bypass simple CAPTCHAs if necessary
+all tensor math for the transformer must execute in Vulkan compute
+shaders. do not run the forward pass on the CPU, and do not substitute
+a CPU BLAS for the GPU path. a CPU reference implementation is required
+only for the verification tests described below.
 
-scraping:
-- display these fields for the map:
-  - map name
-  - map ID
-  - votes
-  - map description
-  - map designer
-- also download the page and save it in an easy to access way, with hardcoded/defined values
+provide complete source, pinned dependencies, shader sources,
+build/run instructions, and the exact commands used to download each
+quantization. document the required Vulkan SDK version and the driver
+capabilities relied upon.
 
-output:
-- display results in a readable terminal format with all five fields
-- also save the results as a UTF-8 JSON array
-- a .html file, with any dependencies (images, css, etc)
+target machine:
+- Windows x64, AMD Radeon RX 5700 XT, 8 GiB VRAM, Vulkan 1.2
+- RDNA1 does not expose VK_KHR_cooperative_matrix; it must not be
+  required, and neither may any hardware matrix or tensor extension
+- ROCm and HIP do not support this GPU; do not depend on them
+- 8-core AMD FX-8300, 12 GiB system RAM, so the host cannot hold a
+  dequantized copy of the model
+- query optional capabilities such as VK_KHR_shader_float16_int8,
+  subgroup size, and shared-memory limits, and select a code path
+  accordingly instead of assuming them
+- report unsupported capabilities clearly; never silently fall back to
+  CPU inference
 
-reliability:
-- use request timeouts and bounded retries for transient failures
-- respect rate limits and Retry-After responses
-- avoid excessive concurrent requests
-- keep TLS certificate verification enabled
-- report network, authentication, and parsing errors clearly
-- never overwrite an existing successful export with results from a
-  failed login or failed listing fetch
+GGUF loading:
+- parse the GGUF container yourself: magic, version, tensor count,
+  metadata key-value pairs of every GGUF type, tensor descriptors,
+  alignment, and data offsets
+- read model shape and hyperparameters from metadata, not hardcoded
+  constants, and fail clearly on an unsupported architecture
+- memory-map the file and stream tensor data to the GPU in bounded
+  staging chunks; never read the whole file into host memory
+- validate offsets, tensor dimensions, and block counts, and report
+  truncated or corrupt files as errors rather than panicking
+- print a model summary: architecture, parameter count, quantization
+  mix per tensor type, context length, and file size
 
-prefer an HTTP session and HTML parser when sufficient. browser automation
-is allowed if the website requires it.
+quantized weights on the GPU:
+- upload weights in their quantized block form and dequantize inside
+  the shaders; do not expand tensors to F16 or F32 on the host or store
+  a dequantized copy of the model in VRAM
+- implement GPU dequantization for F32, F16, Q8_0, Q6_K, Q5_K, Q4_K,
+  Q3_K, and Q2_K, matching the ggml block layouts exactly, including
+  superblock scales, minimums, and packed 6-bit and high-bit fields
+- the _K_M mixes contain several tensor types in one file; dispatch the
+  correct routine per tensor rather than assuming one format
+- fuse dequantization into the matrix kernels so quantized bytes are
+  read once per use, and document the block-to-invocation mapping
+- respect the 8 GiB VRAM budget: compute and report the required
+  capacity for weights, KV cache, and scratch buffers before
+  allocating, and refuse or partially offload with a clear explanation
+  rather than failing mid-load
+- if partial offload is implemented, document the split policy and keep
+  results consistent with full offload
+- document the block layouts, buffer layouts, and memory strategy
 
-provide complete source, pinned dependencies, setup/run instructions,
-and a brief explanation of the login verification and extraction logic.
+model execution:
+- implement the Qwen3 dense decoder yourself: token embedding,
+  RMSNorm, grouped-query attention, per-head query and key RMSNorm,
+  rotary position embeddings, SwiGLU feed-forward, final norm,
+  and the output projection
+- handle non-square projections where num_heads * head_dim differs
+  from hidden_size
+- handle tied input and output embeddings
+- read rope theta, RMSNorm epsilon, and KV head count from metadata
+- implement the batched matrix-multiply path used by prefill and the
+  matrix-vector path used by decode; a single naive kernel for both is
+  not acceptable
+- accumulate in float32, use a numerically stable softmax, and apply
+  rotary embeddings in float32 regardless of the storage precision
+- keep the KV cache in GPU memory, preallocated, with a configurable
+  context length supporting at least 8192 tokens, and report its cost
+- attention must read the cache directly on the GPU; do not copy the
+  cache to the host between tokens
+- refuse to exceed the context window rather than corrupting the cache
+
+tokenizer:
+- build the byte-level BPE tokenizer from the GGUF vocabulary, merges,
+  and token types; do not use an existing tokenizer crate
+- round-trip arbitrary UTF-8, including emoji and CJK text
+- handle the special tokens, and apply the chat template so multi-turn
+  conversations match the model's expected format
+- stream partial output without emitting broken UTF-8 for tokens that
+  end mid-codepoint
+
+generation:
+- support greedy decoding, temperature, top-k, top-p, min-p, and
+  repetition penalty
+- stop on the end-of-turn token, on a token budget, and on Ctrl+C,
+  releasing GPU resources cleanly
+- a fixed seed, prompt, and settings must reproduce identical output
+  on the same build, GPU, and driver; use a deterministic reduction
+  order in the shaders and document where floating-point associativity
+  could otherwise break reproducibility
+- stream tokens to the terminal as they are produced
+- provide a single-shot prompt mode, an interactive chat mode, and a
+  machine-readable output mode
+
+Vulkan implementation:
+- use compute pipelines for every stage of the forward pass
+- assign independent outputs to invocations without write races, and
+  bounds-check invocations at buffer and tile edges
+- manage descriptor sets, buffer memory, queue submission, barriers,
+  and memory visibility correctly between dispatches, uploads, and
+  readback
+- split long work, including prefill of a long prompt, into dispatch
+  batches sized to avoid a Windows GPU timeout; do not require
+  disabling or increasing the system TDR delay
+- wait for GPU work before destroying or reusing resources still in use
+- provide an option to enable Vulkan validation layers, and run clean
+  under them
+- provide device enumeration and selection, and report the selected
+  GPU name, driver version, and Vulkan version
+- repeated generations, context resets, and model reloads must not leak
+  GPU memory, descriptors, or command buffers
+
+verification and measurement:
+- provide a self-test that checks each GPU dequantization routine
+  against known block bytes with expected float results, read back to
+  the host for comparison
+- provide a CPU reference implementation of the forward pass, used only
+  to verify the GPU: compare logits for a fixed prompt within a stated
+  tolerance and report the maximum deviation
+- provide a command that reports perplexity over a supplied UTF-8 text
+  file so quantizations can be compared
+- provide a benchmark reporting initialization and pipeline-creation
+  time separately, load time, prefill tokens per second, decode tokens
+  per second, peak VRAM, and peak host memory
+- use Vulkan GPU timestamp queries for the compute work, and also
+  report wall-clock time including waiting for GPU completion; do not
+  claim CPU submission time is GPU execution time
+- save a machine-readable report containing GPU, driver, quantization,
+  settings, token counts, and timing measurements
+- report progress during model upload and long prompt prefill
+
+no training, fine-tuning, LoRA, speculative decoding, concurrent
+request batching, vision input, multi-GPU, or HTTP server is required.
+prioritize correct quantized GPU inference, sound Vulkan resource
+management, reproducible output, and honest measurement.
 ```
 
 #### Test tasks
 
 | Task | Required behavior |
 |---|---|
-| Fundamentals | Save anything at all. |
-| Authentication | Log in with the supplied test account, verify success, and reuse the authenticated session. |
-| Field accuracy | Correctly extract map name, map ID, votes, description, and designer. |
-| HTML page | Save a snapshot of the HTML page for the linked map. |
-| Completeness | Save the extra details regarding the webpage, such as the map preview image. |
+| Model loading and Vulkan setup | Launch on the RX 5700 XT without cooperative-matrix or hardware matrix extensions, parse the GGUF file, report the correct architecture and quantization mix, and upload weights within the 8 GiB VRAM budget. |
+| Quantization coverage | Run all six quantizations on the GPU; dequantization self-tests pass against known blocks and perplexity degrades in the expected order. |
+| Generation correctness | GPU logits match the CPU reference within tolerance; produce coherent answers with a correct chat template, working stop tokens, and reproducible output for a fixed seed. |
+| Sampling and context | Temperature, top-k, top-p, min-p, and repetition penalty materially change output; multi-turn chat and GPU KV-cache reuse stay correct up to the configured context. |
+| Vulkan reliability and benchmarking | Complete the benchmark with valid GPU timestamp and wall-clock figures; survive repeated generations, resets, and reloads with no validation errors, GPU timeouts, or sustained VRAM growth. |
 
 ### 7. Near-Duplicate Image Finder in Python
 
 ```text
-write a Python program that scans a folder for exact and near-duplicate
-images, even when their files are not byte-for-byte identical.
+write a Python program that scans large image collections for exact,
+near-duplicate, and transformed-duplicate images, using a persistent
+index so repeat scans are incremental.
 
 provide complete source, pinned dependencies, and setup/run instructions.
+do not use an existing duplicate-finder library or service; imagededup,
+difPy, czkawka, and equivalents are not allowed. a decoder such as
+Pillow, a numeric library, and an approximate-nearest-neighbour library
+are allowed.
 
 input:
-- accept the folder path as a command-line argument
+- accept one or more folder paths as command-line arguments
 - support optional recursive scanning of subfolders
-- support JPEG, PNG and WebP
-- handle paths containing spaces and Unicode characters
-- do not follow directory symlinks
+- support JPEG, PNG, WebP, GIF, and APNG; animated WebP, GIF, and APNG
+  are compared on their first frame
+- handle 8-bit, 16-bit, grayscale, palette, and CMYK images
+- convert to sRGB using the embedded ICC profile when present
+- handle paths containing spaces, Unicode, and long Windows paths
+  beyond 260 characters
+- do not follow directory symlinks, and do not rescan the same
+  physical directory twice through junctions or reparse points
+- guard against decompression bombs with a documented pixel limit
 
 image comparison:
 - detect byte-identical files and visually equivalent images stored
   with different compression, metadata, formats, or resolutions
-- detect minor brightness/color changes without treating unrelated
-  images with similar colors as duplicates
-- normalize EXIF orientation before comparison
+- detect minor brightness, contrast, gamma, and saturation changes
+  without treating unrelated images with similar colors as duplicates
+- match the eight dihedral variants: rotations of 90, 180, and 270
+  degrees and horizontal, vertical, and diagonal mirroring
+- match crops that retain at least 70 percent of the original area,
+  and letterboxed or padded versions of the same image
+- match versions carrying a small watermark or logo overlay
+- arbitrary small-angle rotation and heavy artistic filtering need not
+  match; document exactly which transformations are in and out of scope
+- normalize EXIF orientation before comparison, and do not apply it
+  twice for images that also carry a rotated ICC or container hint
 - handle transparency consistently and document the approach
 - use image content rather than filenames, timestamps, or file sizes
-- use perceptual hashing or another suitable similarity method
+- combine more than one descriptor, such as a perceptual hash plus a
+  color or block descriptor, and document how they are fused into a
+  single score
 - expose a configurable similarity threshold with a documented default
   and explain whether higher values mean stricter or looser matching
-- cropping, watermarks, and arbitrary rotations do not need to match
+- provide a documented way to tune the threshold from a labelled set
+
+index and incremental scanning:
+- store descriptors in a persistent local index, such as SQLite, keyed
+  by a content hash and not by path alone
+- a rescan must only decode files that are new or changed, detected by
+  size and modification time with content-hash confirmation, and must
+  reuse stored descriptors for everything else
+- moving or renaming an indexed file must not trigger redecoding
+- detect and prune index entries for deleted files
+- version the index schema and descriptor parameters, and rebuild or
+  migrate cleanly instead of mixing incompatible descriptors
+- the index must survive an interrupted scan without corruption, and
+  a resumed scan must continue rather than start over
+- report index hit and miss counts for each scan
 
 grouping:
 - group matching images and choose one original to keep per group
@@ -738,43 +886,65 @@ grouping:
   its group's retained original; do not group unrelated endpoints
   solely through a chain of intermediate matches
 - assign each file to at most one group
-- produce deterministic results for the same files and settings
+- produce identical results for the same files and settings regardless
+  of scan order, worker count, or the order paths are supplied
 
 output:
 - list each duplicate group with the retained original clearly marked
 - show each file's path, dimensions, and size in bytes
-- show the similarity distance or score against the retained original
+- show the similarity distance or score against the retained original,
+  and which transformation was detected, such as identical, recompressed,
+  rescaled, rotated, mirrored, cropped, or color-adjusted
 - distinguish byte-identical duplicates from perceptual matches
-- report the number of scanned files, successfully processed images,
-  skipped files, duplicate groups, and duplicate files
+- report scanned files, processed images, skipped files, reasons for
+  skipping, duplicate groups, and duplicate files
 - report the total size of duplicate files, excluding the one retained
-  original in each group
-- show this total in exact bytes and human-readable units
+  original in each group, in exact bytes and human-readable units
 - describe it as potential savings based on logical file sizes, not
   guaranteed disk space recovered
+- provide a stable machine-readable JSON or JSONL report alongside the
+  terminal output, with a documented schema and a schema version
+- provide an evaluation mode that takes a ground-truth grouping file
+  and reports precision, recall, and the false positives and false
+  negatives by path
+
+performance and scale:
+- handle a collection of at least 100,000 images
+- decode in parallel across processes, with a configurable worker count
+  defaulting to something sensible for an eight-core machine
+- use approximate nearest-neighbour search, a metric tree, or LSH
+  instead of full pairwise comparison, and report the number of
+  candidate pairs actually scored so sublinear behavior is verifiable
+- keep peak resident memory bounded and documented, well under 2 GiB
+  for a 100,000-image scan, by streaming decodes and storing only
+  compact descriptors
+- show progress with throughput and an estimate of remaining time
+- handle Ctrl+C promptly, leaving no orphaned worker processes
+- document measured throughput, the recall trade-off of the chosen
+  search structure, and known performance limitations
 
 safety and reliability:
-- this is a read-only tool; do not delete, rename, or modify any files
-- count hard links to the same underlying file only once
-- skip unsupported, corrupted, or unreadable files with a warning,
-  without terminating the entire scan
-- handle empty folders and folders containing no duplicates
-- keep memory bounded by processing images incrementally and retaining
-  compact comparison data rather than all decoded images
-- show progress for large scans
-- use candidate filtering or indexing to avoid unnecessary full
-  pairwise comparisons, and document performance limitations
+- this is a read-only tool; do not delete, rename, or modify any
+  scanned file, and keep the index outside the scanned folders
+- count hard links and identical inodes to the same underlying file
+  only once
+- skip unsupported, corrupted, truncated, or unreadable files with a
+  warning, without terminating the entire scan, and survive a worker
+  process that crashes or is killed while decoding
+- handle empty folders, folders with a single image, and folders
+  containing no duplicates
+- never report a group whose retained original is missing or unreadable
 ```
 
 #### Test tasks
 
 | Task | Required behavior |
 |---|---|
-| Exact duplicates | Detect identical image files with different names or locations and group them correctly. |
-| Near duplicates | Detect resized, recompressed, format-converted, and mildly color-adjusted copies. |
-| False-positive control | Keep distinct images separate, including visually similar scenes and unrelated images with similar colors. |
-| Reporting and size accounting | Choose retained originals deterministically and report duplicate counts and total bytes without counting originals or hard links twice. |
-| Robustness and scale | Handle recursive folders, Unicode paths, corrupted files, empty results, and a large image collection without crashing or excessive memory use. |
+| Exact and near duplicates | Detect identical files with different names or locations, plus resized, recompressed, format-converted, and mildly color-adjusted copies. |
+| Transformed duplicates | Detect the eight dihedral variants, crops retaining at least 70 percent of the area, letterboxed copies, and watermarked copies. |
+| Accuracy scoring | Run the labelled fixture set in evaluation mode and meet the predefined precision and recall thresholds, keeping visually similar but distinct scenes separate. |
+| Index and incrementality | Rescan an unchanged folder with no redecoding, handle renamed, deleted, and modified files correctly, and resume cleanly after an interrupted scan. |
+| Scale and reliability | Scan the 100,000-image collection within the memory and candidate-pair budgets, with deterministic grouping across worker counts, Unicode and long paths, corrupted files, and Ctrl+C. |
 
 ### 8. 3D Racing Game in JavaScript
 
@@ -1106,3 +1276,312 @@ collection, and multithreaded support are not required.
 | Reallocation | Correctly shrink, grow in place, and move allocations while preserving their contents. |
 | Integrity under stress | Pass a fixed-seed randomized sequence of allocations, frees, and reallocations without corruption. |
 | Edge cases and failure safety | Handle zero sizes, null, impossible sizes, and injected OS allocation failures without crashes, leaks, or invalidating existing allocations. |
+
+### 11. ZIP Archive Tool in Zig
+
+```text
+write a ZIP archive tool in Zig that lists, tests, extracts, creates,
+and updates .zip archives, reading and writing the ZIP container
+format directly and implementing DEFLATE compression yourself.
+
+target 64-bit Windows. provide complete source, build/run
+instructions, and automated tests. do not use Zig's standard library
+compression or archive modules (std.compress, std.flate, and any
+DEFLATE or ZIP support) or any external compression or archive
+library; zlib, miniz, libzip, libarchive, and equivalents are not
+allowed, as a dependency or as a subprocess. invoking an external zip
+tool at runtime is also forbidden; such tools may be used only to
+prepare fixtures.
+
+manage all memory through explicit allocators. the test suite must run
+leak-free under std.testing.allocator and the release build must run
+under a leak-detecting allocator such as std.heap.GeneralPurposeAllocator
+without reporting leaks. document the ownership of every buffer.
+
+provide these subcommands: list (detailed), test (integrity),
+extract, create, and add/update.
+
+container format:
+- locate the end of central directory record and parse the ZIP64 EOCD
+  locator and record when the 0xFFFFFFFF/0xFFFF sentinel values appear;
+  support archives with more than 65535 entries and members larger than
+  4 GiB
+- read the central directory as the authoritative index, and never
+  extract from local file headers alone; document this choice
+- support methods 0 (store) and 8 (deflate); report other methods
+  clearly without crashing
+- honor data descriptors: when the local header's general-purpose
+  flag 3 is set, read sizes and CRC from the central directory, not
+  the local header
+- decode UTF-8 names via general-purpose flag 11, and document the
+  handling of non-UTF-8 names and of the Info-ZIP Unicode path extra
+  field
+- apply the DOS timestamp field to extracted files
+- on extraction, restore Unix permission bits from the external
+  attributes when present
+- reject archive bombs by a documented, configurable ratio and total
+  size limit, applied during listing before any extraction
+- never write outside the destination directory: reject absolute
+  paths, drive letters, and ".." traversal in member names
+- detect and report encrypted entries without attempting decryption
+
+DEFLATE implementation:
+- implement decompression (inflate) covering stored blocks, fixed
+  Huffman tables, and dynamic Huffman tables, including the second
+  code-length alphabet order and repeat codes 16, 17, and 18
+- implement compression (deflate) producing blocks a standard
+  decompressor accepts, with at minimum a stored fallback, a fixed
+  Huffman mode, and a dynamic Huffman mode using length-distance
+  matching such as a hash chain over a 32 KiB window
+- offer selectable compression levels that trade speed for ratio, and
+  never corrupt data at any level
+- compression may be slower than zlib but must beat store on
+  compressible fixtures by a documented margin
+- compute CRC-32 for every written entry with a table-driven
+  implementation; verify CRC-32 and sizes on read and report the
+  failing member
+
+operations:
+- list: show compressed and uncompressed sizes, ratio, method, CRC,
+  timestamp, and name per entry, plus archive totals
+- test: fully decompress every entry, verify CRC and sizes, and report
+  each failing entry by name without stopping at the first failure
+- extract: support extracting all entries or a named subset, with a
+  documented overwrite policy and an option to strip directory
+  structure
+- create: build archives containing empty files, empty directories,
+  nested paths, and zero-length members, with correct external
+  attributes
+- add/update: append or replace members in an existing archive without
+  rebuilding entries that did not change, updating the central
+  directory and ZIP64 structures accordingly
+- large members must stream: neither input files nor archives may be
+  loaded entirely into memory, and extraction must stay within a
+  documented memory budget for multi-GiB members
+
+robustness:
+- treat archives as untrusted input: validate every offset, length,
+  and count against the file size before use
+- report truncated archives, bad signatures, overlapping structures,
+  cyclic or out-of-range data descriptors, and CRC mismatches as clean
+  errors with exit codes, never as crashes or silent truncation
+- handle archives with prepended data, such as self-extracting stubs,
+  by locating the EOCD from the end of the file
+- use the 64 KiB EOCD search window correctly and handle trailing junk
+  after the central directory
+
+automated tests:
+- round-trip create/extract across file trees containing empty,
+  binary, sparse, and multi-GiB files with a byte-exact comparison
+- interop fixtures: archives written by this tool must pass a standard
+  tool's integrity test, and archives written by standard tools,
+  including stored, deflated, data-descriptor, and ZIP64 variants,
+  must extract byte-exactly
+- fixed known-answer tests for fixed and dynamic Huffman decoding
+- adversarial fixtures: truncated archives, bad CRCs, traversal names,
+  bombs, and prepended data, each with a required error behavior
+- a benchmark reporting compression and extraction throughput and the
+  achieved ratio on a fixed corpus
+
+no encryption, multi-disk spanning, or formats other than ZIP are
+required. prioritize byte-exact correctness, safe handling of hostile
+archives, and interop with standard tools.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Container parsing | Locate and parse the central directory, ZIP64 structures, data descriptors, and UTF-8 names across the supplied fixture archives, including self-extracting and trailing-junk variants. |
+| DEFLATE correctness | Pass the fixed and dynamic Huffman known-answer tests, inflate standard-tool archives byte-exactly, and produce deflate output that a standard tool accepts. |
+| Round-trip fidelity | Extract all fixture sets byte-exactly with correct timestamps, permissions, and structure, and create/update archives that pass a standard tool's integrity test, covering empty files, nested paths, multi-GiB members, and ZIP64. |
+| Hostile input safety | Reject traversal, absolute paths, and bombs; report truncated, corrupt, and CRC-failing archives with clean errors and exit codes, never crashes or partial silent output. |
+| Memory discipline | Run the full test suite leak-free under std.testing.allocator and the release build under a leak-detecting allocator, using explicit allocators throughout, with no hidden global allocation. |
+
+### 12. Regex Engine in C++
+
+```text
+write a regular-expression engine in modern C++ that compiles a pattern
+into an internal form and reports matches with capture-group spans,
+without delegating matching to an existing regex library.
+
+target 64-bit Windows with C++20 and MSVC or MinGW-w64 GCC/Clang.
+provide complete source, build/run instructions, and automated tests.
+std::regex, std::regex_search/match, boost.regex, PCRE, RE2, and any
+other regex engine are not allowed, as a dependency or as a
+subprocess. standard containers, std::string_view, std::variant, and
+the rest of the standard library are allowed.
+
+the engine must be value-semantic and exception-safe, own its compiled
+form through RAII, and match over std::string_view without copying the
+subject. matching a compiled pattern against many inputs must not
+reallocate per call. document the matching strategy and its complexity.
+
+pattern syntax (all required):
+- literals, the any-character dot, and escaping of metacharacters
+- character classes: ranges, negation, escapes within classes, and the
+  predefined classes \d \D \s \S \w \W
+- anchors ^ and $, and the word-boundary anchors \b and \B
+- alternation with the lowest precedence, and grouping with ( )
+- capturing groups with numbered access, and non-capturing (?: )
+- greedy quantifiers * + ? and {m} {m,} {m,n}, and their lazy forms
+  *? +? ?? {m,n}?
+- backreferences \1 through \9 to earlier capture groups
+
+matching semantics:
+- leftmost match, with greedy quantifiers preferring the longest match
+  and lazy quantifiers the shortest, exactly as backtracking defines;
+  document the chosen rule and make it observable
+- capture groups report byte offsets into the subject, including
+  unmatched optional groups as a distinct "did not participate" state
+- find the first match, iterate all non-overlapping matches, and split
+  or replace with capture-group references in the replacement
+- handle empty matches without infinite loops when iterating
+- patterns must compile once and be matched many times; compilation
+  errors must be reported with a position, not crashed on
+
+backtracking safety:
+- provide a match-time budget or a step counter that aborts pathological
+  backtracking and reports it, so patterns such as nested quantifiers
+  over overlapping alternation cannot hang the process
+- document the worst-case behavior and the mechanism that bounds it
+- the classic exponential patterns must fail fast and cleanly under the
+  budget rather than hang or crash
+
+unicode:
+- match over UTF-8 bytes by default, and provide a mode that decodes
+  UTF-8 and treats dot, classes, and case as code points
+- handle invalid UTF-8 without crashing; document the behavior
+- case-insensitive matching for ASCII is required; Unicode case folding
+  is optional and must be documented if provided
+
+automated tests:
+- a known-answer suite of (pattern, subject, expected spans and capture
+  groups) cases covering every required feature, greedy versus lazy,
+  alternation precedence, anchors, backreferences, and empty matches
+- adversarial backtracking cases that must terminate within the budget
+- UTF-8 fixtures including multibyte, combining, and invalid sequences
+- a randomized differential mode that compares against a fixed reference
+  model over generated patterns and subjects
+- a benchmark reporting compile time and match throughput on a fixed
+  corpus, and the memory used per compiled pattern
+- the suite must build and run clean under AddressSanitizer and
+  UndefinedBehaviorSanitizer
+
+no JIT, look-around, possessive quantifiers, atomic groups, or
+recursive patterns are required. prioritize correct leftmost-greedy
+semantics, bounded backtracking, exact capture spans, and leak-free
+value-semantic design over raw throughput.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Syntax and matching | Compile and match the full required syntax — classes, anchors, alternation, grouping, greedy and lazy quantifiers, and backreferences — with correct leftmost-greedy results. |
+| Captures and spans | Report exact byte offsets for every capture group, distinguish non-participating groups, iterate non-overlapping matches without looping on empty matches, and split/replace with group references. |
+| Backtracking safety | Terminate the classic exponential patterns within the stated budget with a clean abort, never hanging or crashing, and document the bounding mechanism. |
+| Unicode handling | Match UTF-8 correctly in both byte and code-point modes, and handle multibyte, combining, and invalid sequences without crashing. |
+| Correctness and hygiene | Pass the known-answer and differential suites, report the benchmark, and run clean under ASan/UBSan with a value-semantic, leak-free, non-copying design. |
+
+### 13. Concurrent KV Store in Go
+
+```text
+write a networked in-memory key-value store in Go, in the spirit of a
+simplified Redis, that serves many concurrent clients over TCP with
+correct shared-state semantics, expiry, eviction, and crash recovery.
+
+do not use an existing in-memory database, cache, or its client/server
+libraries. running against a real Redis or memcached is not allowed.
+the standard library is allowed, but implement the wire protocol, the
+storage engine, and the concurrency control yourself; third-party
+packages for argument parsing, logging, and testing are fine.
+
+provide complete source, a go.mod with pinned toolchain, build/run
+instructions, and an automated test suite that exercises the
+concurrency requirements below.
+
+wire protocol:
+- implement a simple text or RESP-style protocol over TCP, documented
+  precisely, that a scripted client can drive; support pipelined
+  requests and concurrent connections on one port
+- return well-defined replies for success, nil/absent, and errors,
+  with a documented encoding, and never corrupt interleaved replies
+  from concurrent clients
+
+commands (all required):
+- GET, SET, DEL, EXISTS, INCR, DECR, APPEND, STRLEN
+- MGET / MSET for multi-key access
+- EXPIRE, TTL, PERSIST for per-key time-to-live in seconds
+- INCR/DECR and APPEND must be atomic per key under concurrency: N
+  concurrent increments must produce exactly N added, with no lost
+  updates, and APPEND must concatenate without interleaving corruption
+- MSET and multi-key reads must behave consistently under concurrent
+  writers; document the isolation level chosen and make it observable
+- KEYS or SCAN to enumerate keys with a documented, deterministic order
+
+expiry:
+- a key with a TTL must become absent at its deadline; reads after
+  expiry observe it as gone and TTL reports remaining time correctly
+- expiry must be exact under load: implement lazy deletion on access
+  plus active background expiry, and an expired key must never
+  resurrect through INCR, APPEND, or eviction accounting
+- PERSIST must cancel a pending TTL without disturbing other keys
+
+memory and eviction:
+- enforce a configurable max-entries or max-bytes limit
+- on exceeding the limit, evict by least-recently-used, updating
+  recency on reads and writes
+- eviction must be exact: pinned hot keys must survive while cold keys
+  are evicted, and the eviction count must be reported correctly
+- TTL expiry and LRU eviction must not double-count or leak entries
+
+persistence and crash recovery:
+- periodically snapshot or append to a log so state survives restart
+- after a clean restart, reload the exact prior state
+- after a hard kill mid-write, recover a consistent state containing
+  exactly the committed prefix of writes; never a torn or duplicated
+  entry, and never lose an acknowledged write that the log guarantees
+- recovery must reconcile TTLs so expired-at-kill keys stay expired
+
+concurrency control:
+- serve many clients concurrently with per-key or sharded locking, not
+  one global lock that serializes unrelated keys; document the strategy
+- no data races, no deadlocks, and no goroutine or connection leaks
+  under connect/disconnect churn and pipelined load
+- handle slow and misbehaving clients without stalling other clients
+- graceful shutdown must stop accepting, drain in-flight commands,
+  flush persistence, and exit cleanly within a documented bound
+
+observability:
+- report uptime, connected clients, command counts, keyspace size,
+  hit/miss counts, eviction count, and expired-key count
+- the suite must run clean under the Go race detector and must not
+  leak goroutines (checked with a leak detector after tests)
+
+automated tests:
+- a scripted concurrent client harness that fires parallel GET/SET/
+  INCR/APPEND load and asserts exact final state and counters
+- TTL correctness tests across expiry boundaries under concurrent load
+- eviction tests proving exact LRU order and correct counts
+- crash tests that kill the process mid-write and assert the committed
+  prefix is recovered and expired keys stay expired
+- a benchmark reporting throughput and latency percentiles under a
+  fixed concurrent workload, plus peak memory
+
+no replication, clustering, pub/sub, Lua scripting, or multiple data
+structures are required; strings plus these commands are sufficient.
+prioritize correct atomic semantics under concurrency, exact expiry
+and eviction, crash-safe persistence, and a clean race-detector run
+over raw throughput.
+```
+
+#### Test tasks
+
+| Task | Required behavior |
+|---|---|
+| Protocol and commands | Serve the full command set over the documented protocol to concurrent clients, with correct replies, pipelining, and no corrupted interleaving. |
+| Atomic semantics | Execute INCR/DECR/APPEND/MSET atomically per key under parallel load, with exact lost-update-free counts and the documented isolation level. |
+| Expiry and eviction | Apply TTL lazily and actively without resurrection, and evict exact least-recently-used entries with correct counts under a memory limit. |
+| Crash recovery | Recover the committed prefix after a hard kill with no torn, duplicated, or lost acknowledged writes, and keep expired keys expired. |
+| Concurrency hygiene | Run the full suite clean under the race detector with no goroutine or connection leaks, graceful bounded shutdown, and the reported benchmark. |
